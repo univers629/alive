@@ -26,7 +26,7 @@ version now: 2
         // 还可添加更多，以此类推
     ],
     "other": { // 其他配置 (网页上的信息)
-        "user": "YourName", // 你的名字
+        "user": "小歌者", // 你的名字
         "background": "https://ghsrc.wyf9.top/img13.jpg", // 背景图片 url, 可用网络上的图片 api; 推荐 repo: wyf01239/imgapi (网络 api 集合)
         "alpha": 0.85, // 卡片不透明度设置 (0 ~ 1), 0 为完全透明, 1 为完全不透明
         "learn_more": "GitHub Repo", // 更多信息链接的提示, 默认为 github repo
