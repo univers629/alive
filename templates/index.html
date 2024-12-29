@@ -17,7 +17,9 @@
 
         <div style="height: 20px;"></div>
 
-        <a>{{ user }}'s Status:<br><a id="status" style="font-size: 1.2em;">{{ status_name }}</a></a>
+        <a>{{ user }}'s Status:<br><a id="status" style="font-size: 1.2em;">{{ status_name }}</a><span style="font-size: 1em; margin-left: 10px; color: gray;">
+            (当前时间: {{ current_time }})
+        </span></a>
         <br>
         <a id="additional-info" style="font-size: 1em;">{{ status_desc }}</a>
 
