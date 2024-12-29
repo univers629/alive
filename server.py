@@ -4,6 +4,7 @@ import utils as u
 from data import data as data_init
 from flask import Flask, render_template, request, url_for, redirect, flash, make_response
 from markupsafe import escape
+from zoneinfo import ZoneInfo
 
 
 d = data_init()
@@ -36,6 +37,15 @@ def showip(req, msg):
 def index():
     d.load()
     showip(request, '/')
+   
+    # 获取当前时间并转换为 UTC+8 时区（上海时间）
+    now_utc = datetime.now(ZoneInfo("UTC"))  # 获取 UTC 当前时间
+    now_shanghai = now_utc.astimezone(ZoneInfo("Asia/Shanghai"))  # 转换为上海时间（UTC+8）
+
+    # 格式化时间为 hour:minute:second 格式
+    formatted_time = now_shanghai.strftime('%H:%M:%S')
+
+    # 获取状态信息
     ot = d.data['other']
     try:
         stat = d.data['status_list'][d.data['status']]
