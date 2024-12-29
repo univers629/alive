@@ -9,6 +9,11 @@ from jsonc_parser.parser import JsoncParser as jsonp
 def initJson():
     try:
         jsonData = jsonp.parse_file('example.jsonc', encoding='utf-8')
+
+        # 初始化时也要确保包含 'last_updated' 键
+        if 'last_updated' not in jsonData['other']:
+            jsonData['other']['last_updated'] = "00:00:00"
+        
         with open('data.json', 'w+', encoding='utf-8') as file:
             json.dump(jsonData, file, indent=4, ensure_ascii=False)
     except:
