@@ -130,7 +130,7 @@ def set_normal():
         current_time = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%H:%M:%S")
         
         # 更新上次更新时间
-        d.dset('last_updated', current_time）
+        d.dset('last_updated', current_time)
         
         u.info('set success')
         ret = {
