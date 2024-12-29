@@ -18,11 +18,14 @@
         <div style="height: 20px;"></div>
 
         <a>{{ user }}'s Status:<br>
-            <a id="status" style="font-size: 1.2em;">{{ status_name }}</a>
-            <span id="last-updated" style="font-size: 1.2em; color: {{ status_color }};"> - 上次更新: {{ last_updated }}</span>
-        </a>
+            <a id="status" style="font-size: 1.2em;">{{ status_name }}</a></a>
         <br>
         <a id="additional-info" style="font-size: 1em;">{{ status_desc }}</a>
+
+        <!-- 新增的行，显示“上次更新” -->
+        <div style="font-size: 1em; color: inherit;">
+            上次更新: {{ last_updated }}
+        </div>
 
         <div style="height: 10px;"></div>
         {{ more_text | safe }}
