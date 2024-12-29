@@ -137,7 +137,7 @@ def set_normal():
             'success': True,
             'code': 'OK',
             'set_to': status,
-            'app_name':app_name
+            'app_name':app_name，
             'last_updated': current_time  # 将更新时间传回
         }
         return u.format_dict(ret)
