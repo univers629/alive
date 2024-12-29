@@ -127,7 +127,7 @@ def set_normal():
         d.dset('app_name', app_name)
 
         # 获取当前时间并转换为 UTC+8 时区
-        current_time = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%H:%M:%S")
+        current_time = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
         
         # 更新上次更新时间
         d.dset('last_updated', current_time)
