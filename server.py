@@ -38,15 +38,6 @@ def showip(req, msg):
 def index():
     d.load()
     showip(request, '/')
-   
-    # 获取当前时间并转换为 UTC+8 时区（上海时间）
-    now_utc = datetime.now(ZoneInfo("UTC"))  # 获取 UTC 当前时间
-    now_shanghai = now_utc.astimezone(ZoneInfo("Asia/Shanghai"))  # 转换为上海时间（UTC+8）
-
-    # 格式化时间为 hour:minute:second 格式
-    formatted_time = now_shanghai.strftime('%H:%M:%S')
-
-    # 获取状态信息
     ot = d.data['other']
     try:
         stat = d.data['status_list'][d.data['status']]
@@ -67,8 +58,7 @@ def index():
         status_name=stat['name'],
         status_desc=stat['desc'],
         status_color=stat['color'],
-        more_text=ot['more_text'],
-        current_time=formatted_time  # 将时间传递到前端模板
+        more_text=ot['more_text']
     )
 
 
@@ -131,12 +121,20 @@ def set_normal():
     if secret == secret_real:
         d.dset('status', status)
         d.dset('app_name', app_name)
+
+        # 获取当前时间并转换为 UTC+8 时区
+        current_time = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%H:%M:%S")
+        
+        # 更新上次更新时间
+        d.dset('last_updated', current_time）
+        
         u.info('set success')
         ret = {
             'success': True,
             'code': 'OK',
             'set_to': status,
             'app_name':app_name
+            'last_updated': current_time  # 将更新时间传回
         }
         return u.format_dict(ret)
     else:
