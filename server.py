@@ -61,7 +61,7 @@ def index():
         status_name=stat['name'],
         status_desc=stat['desc'],
         status_color=stat['color'],
-        more_text=ot['more_text']，
+        more_text=ot['more_text'],
         last_updated=last_updated  # 传递 last_updated 变量
     )
 
