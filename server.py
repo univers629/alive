@@ -50,6 +50,9 @@ def index():
             'desc': '未知的标识符，可能是配置问题。',
             'color': 'error'
         }
+
+    last_updated = d.dget('last_updated')  # 获取上次更新时间
+    
     return render_template(
         'index.html',
         user=ot['user'],
@@ -58,7 +61,8 @@ def index():
         status_name=stat['name'],
         status_desc=stat['desc'],
         status_color=stat['color'],
-        more_text=ot['more_text']
+        more_text=ot['more_text']，
+        last_updated=last_updated  # 传递 last_updated 变量
     )
 
 
