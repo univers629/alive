@@ -112,6 +112,7 @@ def set_normal():
     showip(request, '/set')
     status = escape(request.args.get("status"))
     app_name = escape(request.args.get("app_name"))
+    battery = escape(request.args.get("battery"))  # 获取电量值
     try:
         status = int(status)
     except:
@@ -124,6 +125,9 @@ def set_normal():
     secret_real = d.dget('secret')
     if secret == secret_real:
         d.dset('status', status)
+        # 如果电量值存在，修改应用名称，显示电量
+        if battery:
+            app_name += f"（电量：{battery}）"
         d.dset('app_name', app_name)
 
         # 获取当前时间并转换为 UTC+8 时区
