@@ -66,7 +66,8 @@ def index():
         status_name=stat['name'],
         status_desc=stat['desc'],
         status_color=stat['color'],
-        more_text=ot['more_text']
+        more_text=ot['more_text'],
+        current_time=formatted_time  # 将时间传递到前端模板
     )
 
 
