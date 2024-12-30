@@ -28,6 +28,12 @@ class data:
             initJson()
         with open('data.json', 'r', encoding='utf-8') as file:
             self.data = json.load(file)
+            
+        # 初始化访问次数和日期
+        if 'view_count' not in self.data['other']:
+            self.data['other']['view_count'] = 0
+        if 'last_visit_date' not in self.data['other']:
+            self.data['other']['last_visit_date'] = self.get_current_date()
 
     def load(self):
         with open('data.json', 'r', encoding='utf-8') as file:
@@ -50,3 +56,15 @@ class data:
             except:
                 gotdata = None
             return gotdata
+
+    def get_current_date(self):
+        # 获取当前日期，格式为 "YYYY-MM-DD"
+        return datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d")
+
+    def reset_view_count_if_new_day(self):
+        # 获取当前日期并与上次记录的日期对比，如果不同则重置访问次数
+        current_date = self.get_current_date()
+        if current_date != self.data['other']['last_visit_date']:
+            self.data['other']['view_count'] = 0
+            self.data['other']['last_visit_date'] = current_date
+            self.save()
