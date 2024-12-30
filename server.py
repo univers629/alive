@@ -113,7 +113,8 @@ def set_normal():
     status = escape(request.args.get("status"))
     app_name = escape(request.args.get("app_name"))
     battery = escape(request.args.get("battery"))  # 获取电量值
-    power = escape(request.args.get("power"))  # 获取充电状态
+    power = escape(request.args.get("power"))  # 获取充电状态 (打开或关闭)
+    
     try:
         status = int(status)
     except:
@@ -126,9 +127,17 @@ def set_normal():
     secret_real = d.dget('secret')
     if secret == secret_real:
         d.dset('status', status)
-        # 如果电量值存在，修改应用名称，显示电量
+        # 根据 power 值判断充电状态
+        if power == '打开':
+            power_status = '充电中'
+        elif power == '关闭':
+            power_status = '放电中'
+        else:
+            power_status = '未知状态'  # 如果 power 不是"打开"或"关闭"
+        
+        # 如果电量值存在，修改应用名称，显示电量和充电状态
         if battery:
-            app_name += f"（电量:{battery}%/{power}）"
+            app_name += f"（电量:{battery}%/{power_status}）"
         d.dset('app_name', app_name)
 
         # 获取当前时间并转换为 UTC+8 时区
