@@ -70,7 +70,7 @@ def index():
         status_desc=stat['desc'],
         status_color=stat['color'],
         more_text=ot['more_text'],
-        last_updated=last_updated  # 传递 last_updated 变量
+        last_updated=last_updated,  # 传递 last_updated 变量
         view_count=view_count  # 传递访问次数
     )
 
