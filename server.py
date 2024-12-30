@@ -38,6 +38,13 @@ def showip(req, msg):
 def index():
     d.load()
     showip(request, '/')
+
+    # 在访问每次页面时，检查日期是否变更，如果变更则重置访问次数
+    d.reset_view_count_if_new_day()
+    
+    # 增加访问次数
+    d.dset('view_count', d.dget('view_count') + 1)
+
     ot = d.data['other']
     try:
         stat = d.data['status_list'][d.data['status']]
@@ -52,6 +59,7 @@ def index():
         }
 
     last_updated = d.dget('last_updated')  # 获取上次更新时间
+    view_count = d.dget('view_count')  # 获取今日已被观察次数
     
     return render_template(
         'index.html',
@@ -63,6 +71,7 @@ def index():
         status_color=stat['color'],
         more_text=ot['more_text'],
         last_updated=last_updated  # 传递 last_updated 变量
+        view_count=view_count  # 传递访问次数
     )
 
 
