@@ -18,10 +18,6 @@ Macrodroid配置文件请下载仓库中的"前台应用状态.macro"
 
 ![PixPin_2024-12-31_11-58-00](https://github.com/user-attachments/assets/578f8ae6-4ee3-40cb-b333-0bf50aacb79a)
 
-服务器:
-
-![server-1](img/server-1.png)
-
 ## 部署
 
 
