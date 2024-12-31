@@ -16,7 +16,7 @@ Macrodroid配置文件请下载仓库中的"前台应用状态.macro"
 
 网页:
 
-![web-1](img/image1.png)
+![web-1]((https://github.com/univers629/images/blob/main/PixPin_2024-12-31_11-52-31.png))
 
 ![web-2](img/image2.png)
 
