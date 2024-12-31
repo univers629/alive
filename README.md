@@ -1,6 +1,4 @@
-# sleepy
-
-> What are you doing?
+# Alive
 
 一个查看个人在线状态，以及视奸他在用什么软件的 Flask 网站，让他人能知道你不在而不是故意吊他/她
 仅仅是在仓库中加入了App_name字段,手机客户端使用请搭配Macrodroid，来实现切换应用上报信息/同步睡眠信息
@@ -12,13 +10,13 @@ Macrodroid配置文件请下载仓库中的"前台应用状态.macro"
 
 ## Preview
 
-演示站: [Here](https://sleepy.1812z.top)
+演示站: [Here](https://smallsinger629.site/)
 
 网页:
 
 ![PixPin_2024-12-31_11-52-31](https://github.com/user-attachments/assets/490fc631-c08d-4474-9eea-91d3cfb97a58)
 
-![web-2](img/image2.png)
+![PixPin_2024-12-31_11-58-00](https://github.com/user-attachments/assets/578f8ae6-4ee3-40cb-b333-0bf50aacb79a)
 
 服务器:
 
