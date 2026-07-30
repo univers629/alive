@@ -521,6 +521,10 @@
 }
 
 @media (max-width: 720px) {
+  #main.card {
+    width: min(1080px, calc(100% - 28px));
+  }
+
   .health-overview__grid {
     grid-template-columns: 1fr;
   }
@@ -528,7 +532,7 @@
 
 @media (max-width: 500px) {
   #main.card {
-    width: calc(100% - 20px);
+    width: min(1080px, calc(100% - 28px));
     padding-top: 4.4rem;
   }
 
