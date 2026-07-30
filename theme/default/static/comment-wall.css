@@ -1,0 +1,406 @@
+.comment-wall {
+  --comment-ink: var(--alive-ink, #f8f8fc);
+  --comment-muted: var(--alive-muted, rgba(248, 248, 252, .62));
+  --comment-faint: var(--alive-faint, rgba(248, 248, 252, .4));
+  --comment-panel: var(--alive-panel, rgba(12, 13, 20, .72));
+  --comment-surface: var(--alive-surface, rgba(255, 255, 255, .065));
+  --comment-input: var(--alive-input, rgba(6, 7, 12, .42));
+  --comment-border: var(--alive-border, rgba(255, 255, 255, .15));
+  --comment-border-soft: var(--alive-border-soft, rgba(255, 255, 255, .1));
+  box-sizing: border-box;
+  width: min(1080px, calc(100% - 40px));
+  margin: 42px auto 0;
+  padding: clamp(18px, 3vw, 30px);
+  color: var(--comment-ink);
+  border: 1px solid var(--comment-border);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(124, 92, 255, .22), transparent 38%),
+    radial-gradient(circle at 90% 18%, rgba(49, 207, 255, .14), transparent 34%),
+    var(--comment-panel);
+  box-shadow:
+    var(--alive-shadow, 0 28px 80px rgba(0, 0, 0, .3)),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+  backdrop-filter: blur(26px) saturate(145%);
+  -webkit-backdrop-filter: blur(26px) saturate(145%);
+}
+
+.comment-wall *,
+.comment-wall *::before,
+.comment-wall *::after,
+.comment-wall__stage,
+.comment-wall__stage * {
+  box-sizing: border-box;
+}
+
+.comment-wall__header,
+.comment-wall__subhead,
+.comment-wall__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.comment-wall__eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #a99aff;
+  font: 750 .68rem/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  letter-spacing: .18em;
+}
+
+.comment-wall h2,
+.comment-wall h3,
+.comment-wall p {
+  margin: 0;
+}
+
+.comment-wall h2 {
+  font: 720 clamp(1.35rem, 3vw, 1.85rem)/1.15 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__header p {
+  margin-top: 7px;
+  color: var(--comment-muted);
+  font: 400 .88rem/1.5 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 13px;
+  color: var(--comment-ink);
+  border: 1px solid var(--comment-border-soft);
+  border-radius: 999px;
+  background: var(--comment-surface);
+  font: 650 .78rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__toggle span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #57e6a5;
+  box-shadow: 0 0 12px rgba(87, 230, 165, .8);
+}
+
+.comment-wall__toggle[aria-pressed="false"] {
+  color: var(--comment-muted);
+}
+
+.comment-wall__toggle[aria-pressed="false"] span {
+  background: #7b7d89;
+  box-shadow: none;
+}
+
+.comment-wall__stage {
+  position: fixed;
+  z-index: 1150;
+  top: calc(56px + env(safe-area-inset-top));
+  right: 0;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition: bottom 420ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.comment-wall__stage[hidden] {
+  display: none;
+}
+
+body.music-island-visible .comment-wall__stage {
+  bottom: calc(116px + env(safe-area-inset-bottom));
+}
+
+body.music-island-visible.music-island-expanded .comment-wall__stage {
+  bottom: calc(360px + env(safe-area-inset-bottom));
+}
+
+.comment-wall__bullet {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(520px, 82vw);
+  padding: 8px 13px;
+  white-space: nowrap;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 999px;
+  background: rgba(16, 17, 25, .78);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+  font: 550 .84rem/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  will-change: transform;
+}
+
+.comment-wall__bullet--rtl {
+  left: 100%;
+  animation: comment-wall-flight-rtl var(--flight-duration, 14s) linear forwards;
+}
+
+.comment-wall__bullet--ltr {
+  right: 100%;
+  animation: comment-wall-flight-ltr var(--flight-duration, 14s) linear forwards;
+}
+
+.comment-wall__bullet strong {
+  color: var(--bullet-color, #b6aaff);
+  font-weight: 720;
+}
+
+.comment-wall__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr);
+  gap: 22px;
+  margin-top: 24px;
+}
+
+.comment-wall__history,
+.comment-wall__form {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--comment-border-soft);
+  border-radius: 22px;
+  background: var(--comment-surface);
+}
+
+.comment-wall__subhead h3 {
+  font: 690 1rem/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__subhead span {
+  color: var(--comment-muted);
+  font: 500 .72rem/1.3 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__list {
+  display: grid;
+  gap: 9px;
+  max-height: 320px;
+  margin: 14px 0 0;
+  padding: 0 2px 0 0;
+  overflow: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color:
+    color-mix(in srgb, var(--comment-muted) 42%, transparent)
+    transparent;
+}
+
+.comment-wall__list::-webkit-scrollbar {
+  width: 10px;
+  background: transparent;
+}
+
+.comment-wall__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.comment-wall__list::-webkit-scrollbar-thumb {
+  min-height: 42px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--comment-muted) 42%, transparent);
+  background-clip: padding-box;
+}
+
+.comment-wall__list::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--alive-accent) 56%, transparent);
+  background-clip: padding-box;
+}
+
+.comment-wall__list::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.comment-wall__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--comment-surface);
+}
+
+.comment-wall__avatar {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  color: var(--item-color, #b6aaff);
+  border: 1px solid color-mix(in srgb, var(--item-color, #b6aaff) 45%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--item-color, #b6aaff) 13%, transparent);
+  font: 750 .78rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__copy {
+  min-width: 0;
+}
+
+.comment-wall__copy strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--item-color, #b6aaff);
+  font: 680 .78rem/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__copy p {
+  overflow-wrap: anywhere;
+  color: var(--comment-ink);
+  font: 450 .84rem/1.5 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__time {
+  color: var(--comment-faint);
+  font: 500 .67rem/1.3 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  white-space: nowrap;
+}
+
+.comment-wall__empty {
+  padding: 36px 12px;
+  color: var(--comment-muted);
+  text-align: center;
+  font: 450 .82rem/1.5 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__form {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.comment-wall__form label {
+  display: grid;
+  gap: 6px;
+  color: var(--comment-ink);
+  font: 600 .75rem/1.25 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__form label small {
+  color: var(--comment-muted);
+  font-weight: 450;
+}
+
+.comment-wall__form input,
+.comment-wall__form textarea,
+.comment-wall__form select {
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--comment-ink);
+  border: 1px solid var(--comment-border-soft);
+  border-radius: 12px;
+  outline: none;
+  background: var(--comment-input);
+  font: 450 .86rem/1.4 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__form textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.comment-wall__form select option {
+  color: var(--comment-ink);
+  background: var(--comment-panel);
+}
+
+.comment-wall__form input:focus,
+.comment-wall__form textarea:focus,
+.comment-wall__form select:focus {
+  border-color: rgba(169, 154, 255, .75);
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, .13);
+}
+
+.comment-wall__honeypot {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+}
+
+.comment-wall__status {
+  min-height: 1em;
+  color: var(--comment-muted);
+  font: 500 .72rem/1.3 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__status.is-error {
+  color: #ff929f;
+}
+
+.comment-wall__submit {
+  flex: none;
+  min-height: 38px;
+  padding: 0 16px;
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #8069ff, #a855f7);
+  box-shadow: 0 10px 24px rgba(124, 92, 255, .28);
+  font: 700 .8rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.comment-wall__submit:disabled {
+  cursor: wait;
+  opacity: .55;
+}
+
+@keyframes comment-wall-flight-rtl {
+  from { transform: translateX(18px); }
+  to { transform: translateX(calc(-100vw - 100%)); }
+}
+
+@keyframes comment-wall-flight-ltr {
+  from { transform: translateX(-18px); }
+  to { transform: translateX(calc(100vw + 100%)); }
+}
+
+@media (max-width: 760px) {
+  .comment-wall {
+    width: min(100% - 28px, 1080px);
+    margin-top: 28px;
+    padding: 15px;
+    border-radius: 24px;
+  }
+
+  .comment-wall__header {
+    align-items: flex-start;
+  }
+
+  .comment-wall__header p {
+    max-width: 220px;
+  }
+
+  body.music-island-visible .comment-wall__stage {
+    bottom: calc(104px + env(safe-area-inset-bottom));
+  }
+
+  body.music-island-visible.music-island-expanded .comment-wall__stage {
+    bottom: calc(348px + env(safe-area-inset-bottom));
+  }
+
+  .comment-wall__content {
+    grid-template-columns: 1fr;
+  }
+
+  .comment-wall__history,
+  .comment-wall__form {
+    padding: 15px;
+    border-radius: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comment-wall__bullet {
+    animation-duration: 1ms;
+  }
+}

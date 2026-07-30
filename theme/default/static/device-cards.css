@@ -1,0 +1,565 @@
+#main.card {
+  width: min(1080px, calc(100% - 40px));
+  padding: 4.7rem clamp(1rem, 3vw, 2.4rem) 2.2rem;
+}
+
+.main-card__corner {
+  position: absolute;
+  z-index: 2;
+  top: 18px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 31px;
+  box-sizing: border-box;
+  color: var(--alive-muted, rgba(40, 37, 50, .62));
+  border: 1px solid var(--alive-border-soft, rgba(61, 55, 75, .12));
+  border-radius: 999px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+  font: 600 .7rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.main-card__corner--visits {
+  left: 18px;
+}
+
+.main-card__corner--online {
+  right: 18px;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+.main-card__corner .visit-metric {
+  min-height: 29px;
+  gap: 6px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  font-size: inherit;
+}
+
+.main-card__corner strong {
+  color: var(--alive-ink, #282532);
+  font-variant-numeric: tabular-nums;
+}
+
+.main-card__online-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: #2ed596;
+  box-shadow: 0 0 10px rgba(46, 213, 150, .72);
+}
+
+.device-overview {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(127, 127, 127, .18);
+  text-align: left;
+}
+
+.device-overview__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 15px;
+}
+
+.device-overview__eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  color: color-mix(in srgb, var(--alive-accent, #765cff) 72%, var(--alive-muted, #555));
+  font: 700 .66rem/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  letter-spacing: .18em;
+}
+
+.device-overview h2 {
+  margin: 0;
+  font: 680 clamp(1.12rem, 2vw, 1.4rem)/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.device-overview__count {
+  flex: none;
+  padding: 6px 10px;
+  border: 1px solid var(--alive-border-soft, rgba(61, 55, 75, .12));
+  border-radius: 999px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+  color: var(--alive-muted, rgba(40, 37, 50, .62));
+  font: 600 .72rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr));
+  gap: 14px;
+}
+
+.device-grid__empty {
+  grid-column: 1 / -1;
+  padding: 28px 18px;
+  border: 1px dashed var(--alive-border-soft, rgba(61, 55, 75, .18));
+  border-radius: 20px;
+  color: var(--alive-muted, rgba(40, 37, 50, .62));
+  text-align: center;
+}
+
+.device-card {
+  --device-glow: rgba(112, 101, 255, .32);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 180px;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid var(--alive-border, rgba(255, 255, 255, .7));
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .12), transparent),
+    var(--alive-surface-soft, rgba(255, 255, 255, .3));
+  box-shadow: 0 13px 34px rgba(24, 20, 35, .12), inset 0 1px 0 rgba(255, 255, 255, .12);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  transition: transform 220ms cubic-bezier(.22, 1, .36, 1), box-shadow 220ms ease, border-color 220ms ease;
+  animation: device-card-in 460ms cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--device-index, 0) * 55ms);
+}
+
+.device-card::before {
+  content: "";
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  top: -92px;
+  right: -70px;
+  border-radius: 50%;
+  background: var(--device-glow);
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+.device-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, .72);
+  box-shadow: 0 20px 46px rgba(24, 20, 35, .18), inset 0 1px 0 rgba(255, 255, 255, .62);
+}
+
+.device-card--active { --device-glow: rgba(55, 213, 151, .4); }
+.device-card--idle { --device-glow: rgba(255, 190, 91, .34); }
+.device-card--offline {
+  --device-glow: rgba(135, 138, 153, .24);
+  opacity: .8;
+}
+
+.device-card__top,
+.device-card__identity,
+.device-card__state,
+.device-card__app,
+.device-card__bottom,
+.device-card__meta,
+.device-card__footer {
+  position: relative;
+  z-index: 1;
+}
+
+.device-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.device-card__identity {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 10px;
+}
+
+.device-card__icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border: 1px solid var(--alive-border-soft, rgba(61, 55, 75, .12));
+  border-radius: 13px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+  font-size: 1.15rem;
+}
+
+.device-card__name {
+  min-width: 0;
+}
+
+.device-card__name strong,
+.device-card__name span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-card__name strong {
+  color: var(--alive-ink, rgba(26, 24, 33, .94));
+  font: 680 .93rem/1.3 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.device-card__name span {
+  margin-top: 2px;
+  color: var(--alive-faint, rgba(40, 37, 50, .42));
+  font: 500 .66rem/1.2 "Segoe UI Variable", sans-serif;
+}
+
+.device-card__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+  color: var(--alive-muted, rgba(40, 37, 50, .62));
+  font: 650 .65rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.device-card__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #90939e;
+  box-shadow: 0 0 0 3px rgba(144, 147, 158, .13);
+}
+
+.device-card--active .device-card__dot {
+  background: #2ed596;
+  box-shadow: 0 0 10px rgba(46, 213, 150, .72);
+}
+
+.device-card--idle .device-card__dot {
+  background: #ffbd59;
+  box-shadow: 0 0 10px rgba(255, 189, 89, .62);
+}
+
+.device-card__app {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 18px 0 13px;
+  padding: 11px 12px;
+  border: 1px solid var(--alive-border-soft, rgba(61, 55, 75, .12));
+  border-radius: 15px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+}
+
+.device-card__app-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 9px;
+  background: linear-gradient(145deg, rgba(118, 94, 255, .9), rgba(73, 186, 225, .9));
+  color: white;
+  font: 700 .82rem/1 "Segoe UI Variable", sans-serif;
+  box-shadow: 0 6px 15px rgba(86, 91, 205, .24);
+}
+
+.device-card__app-icon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.device-card__app-copy {
+  min-width: 0;
+}
+
+.device-card__app-copy small,
+.device-card__app-copy span {
+  display: block;
+}
+
+.device-card__app-copy small {
+  margin-bottom: 2px;
+  color: var(--alive-faint, rgba(40, 37, 50, .42));
+  font: 600 .61rem/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  letter-spacing: .08em;
+}
+
+.device-card__app-copy span {
+  overflow: hidden;
+  color: var(--alive-ink, rgba(30, 27, 37, .82));
+  font: 570 .79rem/1.35 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  gap: 6px;
+}
+
+.device-card__chip {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+  color: var(--alive-muted, rgba(40, 37, 50, .62));
+  font: 550 .62rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.device-card__bottom {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.device-card__footer {
+  flex: none;
+  margin-left: auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+  color: var(--alive-faint, rgba(40, 37, 50, .42));
+  font: 550 .61rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  white-space: nowrap;
+}
+
+.health-overview {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(127, 127, 127, .18);
+  text-align: left;
+}
+
+.health-overview__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 15px;
+}
+
+.health-overview__header h2 {
+  margin: 0;
+  font: 680 clamp(1.12rem, 2vw, 1.4rem)/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.health-overview__badge {
+  flex: none;
+  padding: 6px 10px;
+  color: var(--alive-muted, rgba(40, 37, 50, .62));
+  border: 1px solid var(--alive-border-soft, rgba(61, 55, 75, .12));
+  border-radius: 999px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+  font: 600 .68rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.health-overview__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.health-card {
+  min-height: 188px;
+}
+
+.health-card:nth-child(2) {
+  --device-index: 1;
+}
+
+.device-card__icon--heart {
+  color: #fff;
+  background: linear-gradient(145deg, #ff7285, #e3365b);
+  box-shadow: 0 7px 18px rgba(220, 52, 86, .26);
+  font-size: 1rem;
+}
+
+.device-card__icon--steps {
+  color: #fff;
+  background: linear-gradient(145deg, #63d8a6, #22a676);
+  box-shadow: 0 7px 18px rgba(34, 166, 118, .24);
+  font: 760 .82rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.heart-card__reading {
+  position: relative;
+  z-index: 1;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: auto minmax(120px, 1fr);
+  align-items: center;
+  gap: 18px;
+  margin: 17px 0 12px;
+  padding: 11px 13px;
+  border: 1px solid var(--alive-border-soft, rgba(61, 55, 75, .12));
+  border-radius: 16px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+}
+
+.heart-card__reading > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.heart-card__reading strong {
+  color: #e34862;
+  font: 780 2rem/1 "Segoe UI Variable", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.heart-card__reading span {
+  color: var(--alive-faint, rgba(40, 37, 50, .42));
+  font: 700 .62rem/1 "Segoe UI Variable", sans-serif;
+  letter-spacing: .08em;
+}
+
+.heart-card__pulse {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.heart-card__pulse i {
+  width: 3px;
+  height: 8px;
+  flex: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff7285, #e3365b);
+  box-shadow: 0 0 8px rgba(227, 54, 91, .32);
+  animation: heart-card-pulse 1.3s ease-in-out infinite alternate;
+}
+
+.heart-card__pulse i:nth-child(2),
+.heart-card__pulse i:nth-child(7) { height: 15px; animation-delay: -.6s; }
+.heart-card__pulse i:nth-child(3),
+.heart-card__pulse i:nth-child(6) { height: 25px; animation-delay: -.35s; }
+.heart-card__pulse i:nth-child(4) { height: 33px; animation-delay: -.8s; }
+.heart-card__pulse i:nth-child(5) { height: 18px; animation-delay: -.15s; }
+
+.steps-card__reading {
+  position: relative;
+  z-index: 1;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 17px 0 12px;
+  padding: 11px 13px;
+  border: 1px solid var(--alive-border-soft, rgba(61, 55, 75, .12));
+  border-radius: 16px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+}
+
+.steps-card__number strong,
+.steps-card__number span {
+  display: block;
+}
+
+.steps-card__number strong {
+  color: #22a676;
+  font: 780 1.78rem/1 "Segoe UI Variable", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.steps-card__number span {
+  margin-top: 5px;
+  color: var(--alive-faint, rgba(40, 37, 50, .42));
+  font: 700 .61rem/1 "Segoe UI Variable", sans-serif;
+  letter-spacing: .12em;
+}
+
+.steps-card__ring {
+  --step-progress: 0%;
+  position: relative;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, var(--alive-surface-solid, #fff) 57%, transparent 59%),
+    conic-gradient(#2fc18b var(--step-progress), rgba(127, 127, 127, .16) 0);
+  box-shadow: inset 0 0 0 1px var(--alive-border-soft, rgba(61, 55, 75, .08));
+}
+
+.steps-card__ring span {
+  color: var(--alive-ink, rgba(26, 24, 33, .94));
+  font: 720 .68rem/1 "Segoe UI Variable", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes device-card-in {
+  from { opacity: 0; transform: translateY(12px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes heart-card-pulse {
+  from { transform: scaleY(.58); opacity: .58; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@media (max-width: 720px) {
+  .health-overview__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 500px) {
+  #main.card {
+    width: calc(100% - 20px);
+    padding-top: 4.4rem;
+  }
+
+  .main-card__corner {
+    top: 14px;
+  }
+
+  .main-card__corner--visits {
+    left: 12px;
+  }
+
+  .main-card__corner--online {
+    right: 12px;
+  }
+
+  .device-overview__header {
+    align-items: center;
+  }
+
+  .health-overview__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .device-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .device-card,
+  .heart-card__pulse i {
+    animation: none;
+    transition: none;
+  }
+}

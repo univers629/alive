@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (() => {
+            let mode = 'light';
+            try {
+                mode = localStorage.getItem('alive.colorMode')
+                    || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            } catch (error) {
+                mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.dataset.colorMode = mode;
+            document.documentElement.style.colorScheme = mode;
+        })();
+    </script>
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ page_desc }}">
+    <link rel="icon" href="{{ page_favicon }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='page-shell.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}">
+    <style>
+        body {
+            background: url('{{ page_background }}') no-repeat center center fixed;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+    </style>
+
+</head>
+
+<body>
+    {{ site_chrome | safe }}
+    <div class="container">
+        {% for card_name, card_value in cards.items() %}
+        <div class="card" id="{{ card_name }}">
+            {{ card_value | safe }}
+        </div>
+        {% endfor %}
+    </div>
+    {{ comment_wall | safe }}
+    {{ site_footer | safe }}
+    {{ music_island | safe }}
+</body>
+
+<script type="module" src="{{ url_for('static', filename='get.js') }}" defer></script>
+<script src="{{ url_for('static', filename='color-mode.js') }}" defer></script>
+<script src="{{ url_for('static', filename='glass-select.js') }}" defer></script>
+<script src="{{ url_for('static', filename='site-chrome.js') }}" defer></script>
+
+{{ inject | safe }}
+
+</html>

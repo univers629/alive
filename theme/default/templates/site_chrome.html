@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='site-chrome.css') }}">
+
+<header class="site-topbar" aria-label="站点导航">
+    <button class="site-topbar__menu" id="site-menu-toggle" type="button"
+        aria-label="打开更多菜单" aria-controls="site-drawer" aria-expanded="false">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+    </button>
+
+    <span class="site-topbar__spacer" aria-hidden="true"></span>
+
+    <div class="site-topbar__actions">
+        <button class="color-mode-toggle" id="color-mode-toggle" type="button"
+            aria-label="切换为深色模式" aria-pressed="false">
+            <span class="color-mode-toggle__track" aria-hidden="true">
+                <span class="color-mode-toggle__thumb"></span>
+            </span>
+        </button>
+        <a class="site-topbar__admin" href="/panel" aria-label="打开管理面板">
+            <span aria-hidden="true">⚙</span>
+            <strong>管理</strong>
+        </a>
+    </div>
+</header>
+
+<div class="site-drawer-backdrop" id="site-drawer-backdrop"></div>
+<aside class="site-drawer" id="site-drawer" aria-hidden="true" aria-label="更多页面">
+    <div class="site-drawer__head">
+        <div>
+            <span>ALIVE NAVIGATION</span>
+            <strong>更多</strong>
+        </div>
+        <button class="site-drawer__close" id="site-drawer-close" type="button" aria-label="关闭更多菜单">×</button>
+    </div>
+
+    <nav class="site-drawer__nav">
+        <a href="/" {% if current_page == 'home' %}aria-current="page"{% endif %}>
+            <span class="site-drawer__number">01</span>
+            <span><strong>首页</strong><small>实时设备、音乐与评论</small></span>
+        </a>
+        <a href="/details" {% if current_page == 'details' %}aria-current="page"{% endif %}>
+            <span class="site-drawer__number">02</span>
+            <span><strong>详情</strong><small>统计、排序与情况总结</small></span>
+        </a>
+    </nav>
+
+    <p class="site-drawer__foot">同一套默认主题 · 数据来自当前 Alive 服务</p>
+</aside>

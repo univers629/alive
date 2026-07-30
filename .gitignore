@@ -1,0 +1,22 @@
+# Python Cache
+__pycache__/
+
+# Config
+data/
+config.yaml
+config.toml
+.env
+
+# Data
+*.db
+data.json
+
+# For Local / venv
+*.test.*
+*.local.*
+.venv/
+.venv_legacy/
+.tools/
+
+# Others
+.vscode/launch.json

@@ -1,0 +1,41 @@
+html {
+  min-height: 100%;
+}
+
+body {
+  box-sizing: border-box;
+  margin: 0;
+  min-height: 100vh;
+  padding-top: calc(64px + env(safe-area-inset-top));
+  padding-right: 0;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  padding-left: 0;
+  justify-content: flex-start;
+  transition: padding-bottom 420ms cubic-bezier(.22, 1, .36, 1);
+}
+
+body.music-island-visible {
+  padding-bottom: calc(140px + env(safe-area-inset-bottom));
+}
+
+body.music-island-visible.music-island-expanded {
+  padding-bottom: calc(360px + env(safe-area-inset-bottom));
+}
+
+body > .container {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 620px) {
+  body {
+    padding-top: calc(60px + env(safe-area-inset-top));
+  }
+
+  body.music-island-visible {
+    padding-bottom: calc(128px + env(safe-area-inset-bottom));
+  }
+
+  body.music-island-visible.music-island-expanded {
+    padding-bottom: calc(348px + env(safe-area-inset-bottom));
+  }
+}

@@ -1,0 +1,126 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='device-cards.css') }}">
+<button id="slider" hidden aria-hidden="true">
+    <!--
+                (左) 透明度滑块
+                版权所有 勿删( https://www.iconfont.cn/user/detail?uid=10835226&nid=Cjf7KVUyjUd5
+                -->
+    <svg t="1751612274414" class="icon theme-aware-icon" viewBox="0 0 1024 1024" version="1.1"
+        xmlns="http://www.w3.org/2000/svg" p-id="1808" width="200" height="200">
+        <path
+            d="M720.832 220.16h107.2a41.6 41.6 0 0 1 0 83.2h-107.2a41.6 41.6 0 1 1 0-83.2zM521.92 190.4a41.6 41.6 0 0 1 83.2 0v142.976a41.6 41.6 0 1 1-83.2 0V190.4z"
+            fill="#1F2037" p-id="1809"></path>
+        <path
+            d="M195.968 220.16h367.552a41.6 41.6 0 1 1 0 83.2H195.968a41.6 41.6 0 1 1 0-83.2zM195.968 470.4h143.04a41.6 41.6 0 1 1 0 83.2H195.968a41.6 41.6 0 1 1 0-83.2zM414.72 440.64a41.6 41.6 0 0 1 83.2 0v142.976a41.6 41.6 0 1 1-83.2 0V440.64z"
+            fill="#1F2037" p-id="1810"></path>
+        <path
+            d="M456.256 470.4l371.648-0.96a41.6 41.6 0 1 1 0.256 83.2l-371.712 0.96a41.6 41.6 0 1 1-0.192-83.2zM720.832 720.64h107.2a41.6 41.6 0 0 1 0 83.2h-107.2a41.6 41.6 0 1 1 0-83.2zM521.92 690.752a41.6 41.6 0 0 1 83.2 0v142.976a41.6 41.6 0 1 1-83.2 0v-142.976z"
+            p-id="1811"></path>
+        <path d="M195.968 720.64h352.896a41.6 41.6 0 0 1 0 83.2H195.968a41.6 41.6 0 1 1 0-83.2z" p-id="1812"></path>
+    </svg>
+    <input type="range" id="sliderRange" min="0" max="1" value="0.5" step="0.01">
+</button>
+
+<div class="main-card__corner main-card__corner--visits">
+    {% if visit_metric.enabled %}
+    <div class="visit-metric" id="visit-metric" data-mode="{{ visit_metric.mode }}">
+        <span id="visit-metric-label">{{ visit_metric.label }}</span>
+        <strong id="visit-metric-value">{{ visit_metric.value }}</strong>
+        <span>次</span>
+    </div>
+    {% endif %}
+</div>
+<div class="main-card__corner main-card__corner--online" aria-live="polite">
+    <span class="main-card__online-dot" aria-hidden="true"></span>
+    <span>正在视奸</span>
+    <strong id="online-viewer-count">{{ online_viewers }}</strong>
+    <span>人</span>
+</div>
+
+<h1><ruby>似<rt>sǐ</rt></ruby>了吗?</h1>
+<h3><i><b>{{ username }}'s</b></i> Status:<br><a id="status">{{ status.name }}</a></h3>
+<p id="additional-info">{{ status.desc | safe }}</p>
+<section class="device-overview" aria-labelledby="device-overview-title">
+    <div class="device-overview__header">
+        <div>
+            <span class="device-overview__eyebrow">LIVE DEVICES</span>
+            <h2 id="device-overview-title">当前设备</h2>
+        </div>
+        <span class="device-overview__count" id="device-count">正在连接</span>
+    </div>
+    <div class="device-grid" id="device-status" aria-live="polite">
+        <div class="device-grid__empty">正在读取设备状态…</div>
+    </div>
+</section>
+<section class="health-overview" aria-labelledby="health-overview-title">
+    <div class="health-overview__header">
+        <div>
+            <span class="device-overview__eyebrow">BODY STATUS</span>
+            <h2 id="health-overview-title">身体状态</h2>
+        </div>
+        <span class="health-overview__badge" id="health-data-state">等待真机上报</span>
+    </div>
+
+    <div class="health-overview__grid" id="health-status" aria-live="polite">
+        <article class="device-card device-card--active health-card health-card--heart">
+            <div class="device-card__top">
+                <div class="device-card__identity">
+                    <span class="device-card__icon device-card__icon--heart" aria-hidden="true">♥</span>
+                    <div class="device-card__name">
+                        <strong>心率</strong>
+                        <span id="health-heart-source">等待 Android 真机</span>
+                    </div>
+                </div>
+                <span class="device-card__state"><i class="device-card__dot" aria-hidden="true"></i><span id="health-heart-state">未连接</span></span>
+            </div>
+            <div class="heart-card__reading">
+                <div>
+                    <strong id="health-heart-rate">—</strong>
+                    <span>BPM</span>
+                </div>
+                <div class="heart-card__pulse" aria-hidden="true">
+                    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
+            </div>
+            <div class="device-card__bottom">
+                <div class="device-card__meta">
+                    <span class="device-card__chip" id="health-resting-rate">暂无静息心率</span>
+                    <span class="device-card__chip" id="health-heart-range">暂无今日范围</span>
+                </div>
+                <span class="device-card__footer" id="health-heart-updated">尚无真实数据</span>
+            </div>
+        </article>
+
+        <article class="device-card device-card--active health-card health-card--steps">
+            <div class="device-card__top">
+                <div class="device-card__identity">
+                    <span class="device-card__icon device-card__icon--steps" aria-hidden="true">步</span>
+                    <div class="device-card__name">
+                        <strong>今日步数</strong>
+                        <span id="health-steps-source">等待 Android 真机</span>
+                    </div>
+                </div>
+                <span class="device-card__state"><i class="device-card__dot" aria-hidden="true"></i><span id="health-steps-state">未连接</span></span>
+            </div>
+            <div class="steps-card__reading">
+                <div class="steps-card__number">
+                    <strong id="health-steps">—</strong>
+                    <span>STEPS</span>
+                </div>
+                <div class="steps-card__ring" id="health-steps-ring" style="--step-progress: 0%" aria-label="等待真实步数数据">
+                    <span id="health-steps-percent">0%</span>
+                </div>
+            </div>
+            <div class="device-card__bottom">
+                <div class="device-card__meta">
+                    <span class="device-card__chip" id="health-step-goal">目标 8,000</span>
+                    <span class="device-card__chip" id="health-step-remaining">等待步数数据</span>
+                </div>
+                <span class="device-card__footer" id="health-steps-updated">尚无真实数据</span>
+            </div>
+        </article>
+    </div>
+</section>
+<p id="last-updated">最后更新: {{ last_updated }}</p>
+<script>
+    document.getElementById('status').classList.add("{{ status.color }}");
+</script>

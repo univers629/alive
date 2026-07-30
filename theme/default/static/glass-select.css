@@ -1,0 +1,164 @@
+.glass-select {
+  position: relative;
+  min-width: 0;
+  display: inline-block;
+}
+
+.glass-select > select {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  clip-path: inset(50%) !important;
+}
+
+.glass-select__trigger {
+  width: 100%;
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 9px;
+  box-sizing: border-box;
+  padding: 0 12px 0 14px;
+  color: var(--alive-ink);
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 999px;
+  outline: none;
+  background: var(--alive-input);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .12),
+    0 8px 24px rgba(20, 17, 31, .08);
+  font: 560 .78rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  text-align: left;
+  cursor: pointer;
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+}
+
+.glass-select__trigger:hover,
+.glass-select__trigger[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--alive-accent) 58%, var(--alive-border-soft));
+  background: color-mix(in srgb, var(--alive-surface) 82%, transparent);
+}
+
+.glass-select__trigger:focus-visible {
+  border-color: var(--alive-accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--alive-accent) 16%, transparent),
+    0 10px 28px rgba(20, 17, 31, .1);
+}
+
+.glass-select__value {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.glass-select__chevron {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  display: block;
+  transition: transform 240ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.glass-select__chevron::before,
+.glass-select__chevron::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  width: 7px;
+  height: 1.5px;
+  border-radius: 999px;
+  background: var(--alive-muted);
+}
+
+.glass-select__chevron::before {
+  left: 1px;
+  transform: rotate(42deg);
+}
+
+.glass-select__chevron::after {
+  right: 1px;
+  transform: rotate(-42deg);
+}
+
+.glass-select__trigger[aria-expanded="true"] .glass-select__chevron {
+  transform: rotate(180deg);
+}
+
+.glass-select__menu {
+  position: fixed;
+  z-index: 2200;
+  box-sizing: border-box;
+  display: grid;
+  gap: 5px;
+  max-height: min(320px, calc(100vh - 24px));
+  padding: 7px;
+  overflow: auto;
+  color: var(--alive-ink);
+  border: 1px solid var(--alive-border);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .08), transparent),
+    var(--alive-panel);
+  box-shadow:
+    0 24px 70px rgba(9, 8, 14, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .12);
+  backdrop-filter: blur(30px) saturate(160%);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  scrollbar-width: thin;
+}
+
+.glass-select__menu[hidden] {
+  display: none;
+}
+
+.glass-select__option {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 11px;
+  color: var(--alive-muted);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  outline: none;
+  background: transparent;
+  font: 540 .76rem/1.25 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.glass-select__option:hover,
+.glass-select__option:focus-visible {
+  color: var(--alive-ink);
+  border-color: var(--alive-border-soft);
+  background: var(--alive-surface);
+}
+
+.glass-select__option[aria-selected="true"] {
+  color: var(--alive-ink);
+  background: color-mix(in srgb, var(--alive-accent) 14%, var(--alive-surface));
+  font-weight: 700;
+}
+
+.glass-select__option:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-select__trigger,
+  .glass-select__chevron {
+    transition: none;
+  }
+}

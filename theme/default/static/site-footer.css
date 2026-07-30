@@ -1,0 +1,78 @@
+.site-footer {
+  position: static;
+  box-sizing: border-box;
+  width: min(1080px, calc(100% - 40px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 52px auto 0;
+  padding: 22px 4px 8px;
+  color: var(--alive-muted);
+  border-top: 1px solid var(--alive-border-soft);
+  font: 520 .7rem/1.45 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.site-footer__powered,
+.site-footer__links,
+.site-footer__stack,
+.site-footer__links a {
+  display: flex;
+  align-items: center;
+}
+
+.site-footer__powered {
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.site-footer__lead {
+  color: var(--alive-faint);
+}
+
+.site-footer__stack {
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.site-footer img {
+  width: 16px;
+  height: 16px;
+  display: block;
+  object-fit: contain;
+}
+
+.site-footer__links {
+  flex: none;
+}
+
+.site-footer__links a {
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 11px;
+  color: var(--alive-ink);
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 999px;
+  background: var(--alive-surface);
+  font-weight: 650;
+}
+
+.site-footer__links a:hover {
+  opacity: 1;
+  border-color: var(--alive-accent);
+}
+
+@media (max-width: 620px) {
+  .site-footer {
+    width: calc(100% - 28px);
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 38px;
+    padding-top: 18px;
+  }
+
+  .site-footer__powered {
+    gap: 8px 10px;
+  }
+}

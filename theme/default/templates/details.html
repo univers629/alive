@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (() => {
+            let mode = 'light';
+            try {
+                mode = localStorage.getItem('alive.colorMode')
+                    || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            } catch (error) {
+                mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.dataset.colorMode = mode;
+            document.documentElement.style.colorScheme = mode;
+        })();
+    </script>
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ page_desc }}">
+    <link rel="icon" href="{{ page_favicon }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='page-shell.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='details.css') }}">
+    <style>
+        body {
+            background: url('{{ page_background }}') no-repeat center center fixed;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+
+<body class="details-page">
+    {{ site_chrome | safe }}
+
+    <main class="details-shell">
+        <section class="details-card details-hero">
+            <div>
+                <span class="details-eyebrow">ALIVE OVERVIEW</span>
+                <h1>详情</h1>
+                <p id="details-summary">正在汇总当前状态、设备和互动数据…</p>
+            </div>
+            <div class="details-hero__stamp">
+                <span class="details-live-dot" aria-hidden="true"></span>
+                <span id="details-generated-at">实时读取</span>
+            </div>
+        </section>
+
+        <section class="details-metrics" aria-label="访问与互动统计">
+            <article class="details-metric">
+                <span>今日访问</span>
+                <strong id="metric-daily">—</strong>
+                <small>主页打开次数</small>
+            </article>
+            <article class="details-metric">
+                <span>本周访问</span>
+                <strong id="metric-weekly">—</strong>
+                <small>本周累计</small>
+            </article>
+            <article class="details-metric">
+                <span>本月访问</span>
+                <strong id="metric-monthly">—</strong>
+                <small>本月累计</small>
+            </article>
+            <article class="details-metric">
+                <span>历史访问</span>
+                <strong id="metric-total">—</strong>
+                <small>原有总次数逻辑</small>
+            </article>
+            <article class="details-metric">
+                <span>今日留言</span>
+                <strong id="metric-comments">—</strong>
+                <small id="metric-comments-total">历史 — 条</small>
+            </article>
+        </section>
+
+        <div class="details-layout">
+            <section class="details-card details-devices" aria-labelledby="details-devices-title">
+                <div class="details-section-head">
+                    <div>
+                        <span class="details-eyebrow">DEVICE ORDER</span>
+                        <h2 id="details-devices-title">设备状态与排序</h2>
+                    </div>
+                    <label class="details-sort">
+                        <span>排序</span>
+                        <select id="details-device-sort">
+                            <option value="default">后台顺序</option>
+                            <option value="online">在线优先</option>
+                            <option value="updated">最近更新</option>
+                            <option value="name">设备名称</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="details-device-summary" aria-label="设备状态分布">
+                    <span><i class="is-active"></i><b id="device-active-count">0</b> 使用中</span>
+                    <span><i class="is-idle"></i><b id="device-idle-count">0</b> 在线空闲</span>
+                    <span><i class="is-offline"></i><b id="device-offline-count">0</b> 离线</span>
+                </div>
+                <div class="details-device-list" id="details-device-list">
+                    <p class="details-empty">正在读取设备…</p>
+                </div>
+            </section>
+
+            <div class="details-side">
+                <section class="details-card details-situation">
+                    <div class="details-section-head">
+                        <div>
+                            <span class="details-eyebrow">CURRENT SITUATION</span>
+                            <h2>当前情况</h2>
+                        </div>
+                    </div>
+                    <dl class="details-facts">
+                        <div><dt>手动状态</dt><dd id="fact-status">—</dd></div>
+                        <div><dt>在线设备</dt><dd id="fact-online">—</dd></div>
+                        <div><dt>当前音乐</dt><dd id="fact-music">—</dd></div>
+                        <div><dt>评论总数</dt><dd id="fact-comments">—</dd></div>
+                    </dl>
+                </section>
+
+                <section class="details-card details-history">
+                    <span class="details-eyebrow">DAILY REPORT</span>
+                    <h2>日报与应用排行</h2>
+                    <p>当前客户端只上报“此刻正在做什么”，尚未保存应用开始与结束时间。因此这里不会用当前状态伪造使用时长。</p>
+                    <div class="details-history__next">
+                        <span>下一步数据链路</span>
+                        <ol>
+                            <li>客户端上报应用切换事件</li>
+                            <li>服务端闭合使用时段</li>
+                            <li>按日汇总时长与排行</li>
+                        </ol>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    {{ site_footer | safe }}
+    {{ music_island | safe }}
+
+    <script src="{{ url_for('static', filename='color-mode.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='glass-select.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='site-chrome.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='details.js') }}" defer></script>
+</body>
+
+</html>

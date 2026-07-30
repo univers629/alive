@@ -1,0 +1,6 @@
+--index-url https://pypi.org/simple
+
+pywin32>=308
+requests>=2.32.4
+mutagen>=1.47.0
+winsdk==1.0.0b10

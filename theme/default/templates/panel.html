@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script>
+            (() => {
+                let mode = 'light';
+                try {
+                    mode = localStorage.getItem('alive.colorMode')
+                        || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                } catch (error) {
+                    mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                document.documentElement.dataset.colorMode = mode;
+                document.documentElement.style.colorScheme = mode;
+            })();
+        </script>
+        <title>{{ page_name }} - 管理面板</title>
+        <meta name="description" content="管理面板" />
+        <link rel="icon" href="{{ c.page.favicon }}" />
+        <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}" />
+        <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}" />
+        <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}" />
+        <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}" />
+        <style>
+            body {
+                background: url('{{ c.page.background }}') no-repeat center center fixed;
+                background-size: cover;
+            }
+        </style>
+        <script src="{{ url_for('static', filename='color-mode.js') }}" defer></script>
+        <script src="{{ url_for('static', filename='glass-select.js') }}" defer></script>
+        <script src="{{ url_for('static', filename='panel.js') }}" defer></script>
+    </head>
+
+    <body class="admin-panel">
+        <div class="panel-container">
+            <div class="panel-header">
+                <div class="panel-heading">
+                    <span>ALIVE CONTROL CENTER</span>
+                    <h1 class="panel-title">{{ page_name }} 的管理面板</h1>
+                </div>
+                <div class="panel-actions">
+                    <button class="btn btn-primary" id="refresh-btn">刷新数据</button>
+                    <a class="btn btn-secondary" href="/">查看前台</a>
+                    <button class="btn btn-danger" id="logout-btn">退出登录</button>
+                    <button class="color-mode-toggle" id="color-mode-toggle" type="button"
+                        aria-label="切换为深色模式" aria-pressed="false">
+                        <span class="color-mode-toggle__track" aria-hidden="true">
+                            <span class="color-mode-toggle__thumb"></span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-section">
+                    <h2 class="panel-section-title">主页展示与弹幕</h2>
+                    <p class="panel-help">这些设置保存在 SQLite；修改用户名不会改变设备 ID 或累计访问数据。</p>
+                    <div class="settings-grid">
+                        <label>主页用户名
+                            <input id="page-name" class="panel-input panel-input-wide" maxlength="64"
+                                autocomplete="off" placeholder="例如：Alive">
+                        </label>
+                        <label>访问次数
+                        <select id="visit-display-mode" class="panel-input">
+                            <option value="total">累计访问</option>
+                            <option value="daily">今日访问</option>
+                            <option value="monthly">本月访问</option>
+                        </select>
+                        </label>
+                        <label class="settings-toggle">弹幕总开关
+                            <input id="danmaku-enabled" type="checkbox">
+                            <span>允许主页显示弹幕</span>
+                        </label>
+                        <label>容器内音乐目录
+                            <input id="music-library" class="panel-input panel-input-wide" maxlength="4096"
+                                autocomplete="off" placeholder="/alive/music-library">
+                        </label>
+                    </div>
+                    <p class="panel-help">Docker 下这里填写容器内路径；宿主机路径请在 `.env` 的
+                        `ALIVE_MUSIC_LIBRARY_HOST` 中配置，修改挂载后需要重启容器。</p>
+                    <button class="btn btn-primary" id="save-display-settings-btn">保存主页设置</button>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-section">
+                    <h2 class="panel-section-title">后台密钥</h2>
+                    <p class="panel-help">密钥不会回显。轮换后旧后台会话和所有客户端密钥立即失效，请同步更新客户端。</p>
+                    <div class="settings-grid">
+                        <label>新密钥
+                            <input id="new-secret" class="panel-input panel-input-wide" type="password"
+                                minlength="6" autocomplete="new-password">
+                        </label>
+                        <label>再次输入
+                            <input id="confirm-secret" class="panel-input panel-input-wide" type="password"
+                                minlength="6" autocomplete="new-password">
+                        </label>
+                    </div>
+                    <button class="btn btn-danger" id="save-secret-btn">轮换密钥</button>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-section">
+                    <h2 class="panel-section-title">状态管理</h2>
+                    <p>当前状态: <span id="current-status-name">加载中...</span></p>
+                    <div class="status-selector" id="status-selector"></div>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-section">
+                    <h2 class="panel-section-title">设备管理</h2>
+                    <div class="panel-actions panel-device-actions">
+                        <button class="btn btn-danger" id="clear-devices-btn">清除所有设备</button>
+                        <div class="private-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="private-mode-toggle" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span>隐私模式</span>
+                        </div>
+                    </div>
+                    <div class="device-table-wrap">
+                        <table class="device-list">
+                            <thead>
+                                <tr>
+                                    <th>设备ID</th>
+                                    <th>显示名称</th>
+                                    <th>图标</th>
+                                    <th>顺序</th>
+                                    <th>公开</th>
+                                    <th>实时状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="device-list-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {% if c.metrics.enabled %}
+            <div class="panel-card">
+                <div class="panel-section">
+                    <h2 class="panel-section-title">访问统计</h2>
+                    <div class="metrics-container" id="metrics-container"></div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </body>
+
+    {{ inject | safe }}
+</html>

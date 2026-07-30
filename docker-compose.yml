@@ -1,0 +1,25 @@
+services:
+  alive:
+    container_name: alive
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9010:9010"
+    volumes:
+      - ./data:/alive/data
+      - "${ALIVE_MUSIC_LIBRARY_HOST:-./data/music-library}:/alive/music-library"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      ALIVE_MAIN_COLORFUL_LOG: "false"
+      ALIVE_MAIN_SECRET: "${ALIVE_SECRET:?Set ALIVE_SECRET in .env or the shell}"
+      ALIVE_MAIN_MUSIC_LIBRARY: "/alive/music-library"
+      ALIVE_PAGE_NAME: "${ALIVE_PAGE_NAME:-Alive}"
+    healthcheck:
+      test: ["CMD", "/alive/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9010/api/meta', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

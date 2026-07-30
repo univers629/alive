@@ -1,0 +1,86 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='music-island.css') }}">
+
+<aside id="music-island" class="music-island" hidden aria-label="机主当前正在听">
+    <div class="music-island__ambient" aria-hidden="true">
+        <img class="music-island__ambient-image" alt="">
+        <span class="music-island__light music-island__light--one"></span>
+        <span class="music-island__light music-island__light--two"></span>
+    </div>
+
+    <div
+        class="music-island__summary"
+        role="button"
+        tabindex="0"
+        aria-expanded="false"
+        aria-controls="music-island-detail"
+        title="展开当前音乐"
+    >
+        <div class="music-island__cover-shell" aria-hidden="true">
+            <div class="music-island__cover-fallback">♪</div>
+            <img class="music-island__cover" alt="">
+            <span class="music-island__record-hole"></span>
+        </div>
+
+        <div class="music-island__copy">
+            <strong class="music-island__title">等待音乐上报</strong>
+            <span class="music-island__artist">未知艺术家</span>
+        </div>
+
+        <svg
+            class="music-island__speaker"
+            role="img"
+            aria-label="网页未开启一起听"
+            title="网页未开启一起听"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path class="music-island__speaker-body" d="M11 5 6 9H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3l5 4V5Z"></path>
+            <path class="music-island__speaker-wave music-island__speaker-wave--one" d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+            <path class="music-island__speaker-wave music-island__speaker-wave--two" d="M18.5 5.5a9 9 0 0 1 0 13"></path>
+            <path class="music-island__speaker-slash" d="m16 9 6 6m0-6-6 6"></path>
+        </svg>
+        <div class="music-island__app" title="媒体播放器" aria-label="音乐应用：媒体播放器">
+            <span class="music-island__app-glyph" aria-hidden="true">▶</span>
+            <span class="music-island__playing-dot" aria-hidden="true"></span>
+        </div>
+    </div>
+
+    <div id="music-island-detail" class="music-island__detail">
+        <div
+            class="music-island__progress"
+            role="progressbar"
+            aria-label="机主播放进度，只读"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+        >
+            <span class="music-island__progress-fill"></span>
+        </div>
+        <div class="music-island__progress-meta">
+            <span class="music-island__elapsed">0:00</span>
+            <span class="music-island__readonly">机主播放进度 · 仅查看</span>
+            <span class="music-island__duration">0:00</span>
+        </div>
+
+        <div class="music-island__lyric-now" aria-live="polite">
+            <span class="music-island__lyric-mark" aria-hidden="true">♪</span>
+            <p class="music-island__current-lyric">暂无同步歌词</p>
+        </div>
+
+        <div class="music-island__together">
+            <div class="music-island__owner">
+                <span class="music-island__owner-dot" aria-hidden="true"></span>
+                <span class="music-island__owner-state">机主正在播放</span>
+            </div>
+            <button class="music-island__join" type="button" disabled>一起听</button>
+        </div>
+    </div>
+
+    <audio class="music-island__audio" preload="metadata"></audio>
+</aside>
+
+<script src="{{ url_for('static', filename='music-island.js') }}" defer></script>

@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Alive API 文档 / Documentation</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #f5f7fb;
+            --card: #fff;
+            --text: #172033;
+            --muted: #647089;
+            --border: #dce2ec;
+            --accent: #356ae6;
+            --get: #147d64;
+            --post: #9a5412;
+            --code: #101828;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0d111a;
+                --card: #151b27;
+                --text: #edf2ff;
+                --muted: #a9b4ca;
+                --border: #303a4d;
+                --accent: #85a8ff;
+                --get: #59d5b2;
+                --post: #ffb86b;
+                --code: #080b11;
+            }
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: var(--text);
+            background: var(--bg);
+            font-family: Inter, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+            line-height: 1.65;
+        }
+        .wrap { width: min(980px, calc(100% - 32px)); margin: 52px auto 80px; }
+        .hero, .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 8px 28px rgba(22, 32, 51, .06);
+        }
+        h1 { margin: 0 0 8px; font-size: clamp(30px, 5vw, 48px); }
+        h2 { margin: 0 0 14px; font-size: 22px; }
+        h3 { margin: 22px 0 8px; }
+        p { margin: 8px 0; }
+        a { color: var(--accent); }
+        .muted { color: var(--muted); }
+        .links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+        .links a, #language-toggle {
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 8px 14px;
+            background: var(--card);
+            color: var(--text);
+            text-decoration: none;
+            cursor: pointer;
+            font: inherit;
+        }
+        #language-toggle {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 10;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, .14);
+        }
+        table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }
+        th, td { padding: 11px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+        th { color: var(--muted); font-size: 14px; }
+        .method { font-weight: 800; font-family: Consolas, monospace; }
+        .get { color: var(--get); }
+        .post { color: var(--post); }
+        code { font-family: Consolas, "Cascadia Code", monospace; }
+        pre {
+            overflow-x: auto;
+            padding: 16px;
+            border-radius: 12px;
+            color: #e6edf7;
+            background: var(--code);
+            line-height: 1.5;
+        }
+        .notice {
+            border-left: 4px solid var(--accent);
+            padding: 10px 14px;
+            background: color-mix(in srgb, var(--accent) 8%, transparent);
+            border-radius: 4px 10px 10px 4px;
+        }
+        [data-lang][hidden] { display: none !important; }
+        @media (max-width: 640px) {
+            .wrap { margin-top: 72px; }
+            .hero, .card { padding: 18px; border-radius: 12px; }
+            #language-toggle { top: 10px; right: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <button id="language-toggle" type="button" aria-label="Switch language">English</button>
+
+    <main class="wrap" data-lang="zh">
+        <section class="hero">
+            <h1>Alive API 文档</h1>
+            <p class="muted">个人在线状态服务 · FastAPI · POST 安全写入</p>
+            <div class="links">
+                <a href="/">返回状态页</a>
+                <a href="/panel">打开管理后台</a>
+                <a href="/swagger">交互式 API 测试</a>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>先记住这两条</h2>
+            <p class="notice">
+                查询数据使用 <strong>GET</strong>；修改数据使用 <strong>POST</strong>。
+                密钥不要放在 URL，推荐放在 <code>Authorization: Bearer 你的密钥</code> 请求头。
+            </p>
+            <p>网页管理后台不需要手写 API。访问 <a href="/panel">/panel</a>，输入密钥登录后即可直接修改状态、设备和隐私模式。</p>
+        </section>
+
+        <section class="card">
+            <h2>公开读取接口</h2>
+            <table>
+                <thead><tr><th>方法</th><th>路径</th><th>作用</th><th>需要密钥</th></tr></thead>
+                <tbody>
+                    <tr><td class="method get">GET</td><td><code>/api/meta</code></td><td>站点信息和版本</td><td>否</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/status/query</code></td><td>当前状态和设备</td><td>否</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/status/list</code></td><td>手动状态列表</td><td>否</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/status/events</code></td><td>SSE 实时状态流</td><td>否</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/health/query</code></td><td>心率和今日步数</td><td>否</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/music/query</code></td><td>当前音乐和同步歌词</td><td>否</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/metrics</code></td><td>访问次数统计</td><td>否</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>数据修改接口</h2>
+            <table>
+                <thead><tr><th>方法</th><th>路径</th><th>JSON 内容</th></tr></thead>
+                <tbody>
+                    <tr><td class="method post">POST</td><td><code>/api/status/set</code></td><td><code>{"status": 1}</code></td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/device/set</code></td><td>新增或更新设备</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/device/app-icon</code></td><td>上传 Android 当前应用图标</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/admin/settings</code></td><td>修改主页、弹幕和音乐目录</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/admin/secret</code></td><td>安全轮换全局密钥</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/device/remove</code></td><td><code>{"id": "desktop"}</code></td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/device/clear</code></td><td><code>{}</code></td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/device/private</code></td><td><code>{"private": true}</code></td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/health/set</code></td><td>更新心率和今日步数</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/music/set</code></td><td>更新当前播放状态</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/music/track/check</code></td><td>按 SHA-256 检查是否已上传</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/music/track/upload</code></td><td>流式上传当前歌曲二进制</td></tr>
+                </tbody>
+            </table>
+
+            <h3>Windows PowerShell 上报示例</h3>
+            <pre><code>$secret = "填入 .env 中的 ALIVE_SECRET"
+$headers = @{ Authorization = "Bearer $secret" }
+$body = @{
+  id = "windows-test"
+  show_name = "Windows 测试机"
+  using = $true
+  status = "PowerShell"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:9010/api/device/set" `
+  -Headers $headers `
+  -ContentType "application/json" `
+  -Body $body</code></pre>
+        </section>
+
+        <section class="card">
+            <h2>Windows 客户端关闭行为</h2>
+            <p><code>Ctrl+C</code> 最可靠：脚本会先上报“未使用”，然后退出。</p>
+            <p>直接关闭 PowerShell 或 Windows Terminal 页面时，脚本也会监听关闭事件并尝试上报，但操作系统可能直接终止子进程，因此不能保证请求一定发完。</p>
+            <p>Alive 还有服务端兜底：客户端每 60 秒发送心跳；连续 150 秒没有任何上报，设备会自动变成“未使用”。可通过 <code>status.device_timeout</code> 调整。</p>
+        </section>
+
+        <section class="card">
+            <h2>密钥安全</h2>
+            <p>Alive 只使用一个全局密钥，后台和所有设备客户端共同使用。最低 6 位，不需要为每台设备设置不同密码；正式部署仍建议使用更长的随机值。</p>
+            <p>不要使用 <code>?secret=xxx</code>。查询字符串可能进入浏览器历史、代理日志、服务器日志和监控系统，Alive 会拒绝这种认证方式。</p>
+            <p>推荐 Bearer 请求头。网页后台登录成功后使用签名的 HttpOnly Cookie，Cookie 中不包含原始密钥。</p>
+        </section>
+    </main>
+
+    <main class="wrap" data-lang="en" hidden>
+        <section class="hero">
+            <h1>Alive API Documentation</h1>
+            <p class="muted">Personal status service · FastAPI · Secure POST mutations</p>
+            <div class="links">
+                <a href="/">Status page</a>
+                <a href="/panel">Admin panel</a>
+                <a href="/swagger">Interactive API</a>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Two rules to remember</h2>
+            <p class="notice">
+                Use <strong>GET</strong> to read data and <strong>POST</strong> to change it.
+                Never put the secret in a URL. Prefer the
+                <code>Authorization: Bearer YOUR_SECRET</code> header.
+            </p>
+            <p>You can manage everything in a browser at <a href="/panel">/panel</a> without writing API requests.</p>
+        </section>
+
+        <section class="card">
+            <h2>Public read endpoints</h2>
+            <table>
+                <thead><tr><th>Method</th><th>Path</th><th>Purpose</th><th>Secret</th></tr></thead>
+                <tbody>
+                    <tr><td class="method get">GET</td><td><code>/api/meta</code></td><td>Site metadata and version</td><td>No</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/status/query</code></td><td>Current status and devices</td><td>No</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/status/list</code></td><td>Manual status choices</td><td>No</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/status/events</code></td><td>Live SSE status stream</td><td>No</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/health/query</code></td><td>Heart rate and today's steps</td><td>No</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/music/query</code></td><td>Current music and timed lyrics</td><td>No</td></tr>
+                    <tr><td class="method get">GET</td><td><code>/api/metrics</code></td><td>Visit metrics</td><td>No</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>Mutation endpoints</h2>
+            <table>
+                <thead><tr><th>Method</th><th>Path</th><th>JSON body</th></tr></thead>
+                <tbody>
+                    <tr><td class="method post">POST</td><td><code>/api/status/set</code></td><td><code>{"status": 1}</code></td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/device/set</code></td><td>Create or update a device</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/device/app-icon</code></td><td>Upload the current Android app icon</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/admin/settings</code></td><td>Update homepage, danmaku, and music directory</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/admin/secret</code></td><td>Securely rotate the global secret</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/device/remove</code></td><td><code>{"id": "desktop"}</code></td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/device/clear</code></td><td><code>{}</code></td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/device/private</code></td><td><code>{"private": true}</code></td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/health/set</code></td><td>Update heart rate and steps</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/music/set</code></td><td>Update now-playing state</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/music/track/check</code></td><td>Check by SHA-256 before upload</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/music/track/upload</code></td><td>Stream the current audio file</td></tr>
+                </tbody>
+            </table>
+
+            <h3>Device update JSON</h3>
+            <pre><code>{
+  "id": "windows-test",
+  "show_name": "Windows PC",
+  "using": true,
+  "status": "PowerShell",
+  "fields": {}
+}</code></pre>
+        </section>
+
+        <section class="card">
+            <h2>Closing the Windows client</h2>
+            <p><code>Ctrl+C</code> is the most reliable exit: the client reports “not using” before it stops.</p>
+            <p>Closing a PowerShell or Windows Terminal tab also triggers a best-effort close handler, but the operating system may kill the child process before the HTTP request finishes.</p>
+            <p>Server fallback: the client sends a heartbeat every 60 seconds. After 150 seconds without an update, Alive automatically marks the device as not using. Configure this with <code>status.device_timeout</code>.</p>
+        </section>
+
+        <section class="card">
+            <h2>Secret safety</h2>
+            <p>Alive uses one global secret shared by the admin panel and all device clients. The minimum length is 6 characters; devices do not have separate passwords. Use a longer random value in production.</p>
+            <p>Do not use <code>?secret=xxx</code>. Query strings can be recorded in browser history, proxy logs, server logs, and monitoring systems. Alive rejects query-string authentication.</p>
+            <p>Prefer a Bearer header. Browser admin sessions use a signed HttpOnly cookie that does not contain the original secret.</p>
+        </section>
+    </main>
+
+    <script>
+        (() => {
+            const button = document.getElementById('language-toggle');
+            const sections = document.querySelectorAll('[data-lang]');
+            let language = localStorage.getItem('alive-docs-language') || 'zh';
+
+            function applyLanguage(next) {
+                language = next === 'en' ? 'en' : 'zh';
+                document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
+                document.title = language === 'zh'
+                    ? 'Alive API 文档'
+                    : 'Alive API Documentation';
+                sections.forEach(section => {
+                    section.hidden = section.dataset.lang !== language;
+                });
+                button.textContent = language === 'zh' ? 'English' : '中文';
+                localStorage.setItem('alive-docs-language', language);
+            }
+
+            button.addEventListener('click', () => {
+                applyLanguage(language === 'zh' ? 'en' : 'zh');
+            });
+            applyLanguage(language);
+        })();
+    </script>
+</body>
+</html>

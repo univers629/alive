@@ -1,0 +1,314 @@
+:root {
+  --light-bg-rgb: 247, 248, 253;
+  --dark-bg-rgb: 12, 13, 20;
+  --card-alpha: 0.72;
+}
+
+html {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  background-size: cover;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+a {
+  color: var(--alive-link, #6348c8);
+  text-decoration: none;
+  transition: color 220ms ease, opacity 220ms ease;
+}
+
+a:hover {
+  opacity: .78;
+}
+
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  /* 兼容 WebKit 内核浏览器 */
+  appearance: none;
+  /* 标准属性，提升兼容性 */
+}
+
+button:hover {
+  background: var(--control-bg);
+}
+
+div p {
+  opacity: 0.8;
+}
+#slider {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+}
+
+#slider svg {
+  width: 42px;
+  height: 42px;
+}
+/* 左上右上及链接按钮深浅反色 */
+/* 默认：浅色模式，无滤镜 */
+.theme-aware-icon {
+  filter: invert(0) brightness(1);
+  transition: filter 0.3s ease;
+}
+/* 深色模式：反色 + 轻微提亮 */
+.dark .theme-aware-icon {
+  filter: invert(1) brightness(1.2);
+}
+
+#sliderRange {
+  display: none;
+  position: absolute;
+  border: none;
+  top: 19px;
+  left: 60px;
+  filter: invert(0.8);
+}
+
+.light, .card {
+  color: var(--alive-ink, #282532);
+  border: 1px solid var(--alive-border, rgba(255, 255, 255, .7));
+  background:
+    radial-gradient(circle at 12% 0%, rgba(124, 92, 255, .16), transparent 38%),
+    radial-gradient(circle at 90% 18%, rgba(49, 207, 255, .1), transparent 34%),
+    var(--alive-panel, rgba(247, 248, 253, .72));
+  box-shadow:
+    var(--alive-shadow, 0 28px 80px rgba(36, 31, 53, .16)),
+    inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+
+
+
+.card {
+  padding: 2rem 1rem;
+  margin: 1rem auto;
+  font-size: 1.1em;
+  /* 大屏宽度 */
+  width: 65%;
+  text-align: center;
+  backdrop-filter: blur(26px) saturate(145%);
+  -webkit-backdrop-filter: blur(26px) saturate(145%);
+  border-radius: 30px;
+  position: relative;
+  transition:
+    color 260ms ease,
+    background 260ms ease,
+    border-color 260ms ease,
+    transform 220ms cubic-bezier(.22, 1, .36, 1),
+    box-shadow 220ms ease;
+}
+
+
+/* 较大屏范围 */
+@media (max-width: 1250px) {
+  .card {
+    /* 大屏宽度 */
+    width: 60%;
+  }
+}
+
+/* 较小屏范围 */
+@media (max-width: 750px) {
+  body {
+    touch-action: pan-y;
+  }
+
+  .card {
+    /* 较小屏宽度 */
+    width: 75%;
+  }
+}
+
+/* 小屏范围 */
+@media (max-width: 500px) {
+  .card {
+    /* 小屏宽度 */
+    width: 90%;
+  }
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow:
+    0 34px 94px rgba(30, 24, 48, .23),
+    inset 0 1px 0 rgba(255, 255, 255, .14);
+}
+
+.glass {
+  height: 200px;
+}
+
+#last-updated {
+  font-size: 0.8em;
+}
+
+.card p {
+  font-size: 1.1em;
+  margin: 1rem;
+}
+
+.visit-metric {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px auto 8px;
+  padding: 7px 12px;
+  color: var(--alive-muted, rgba(40, 37, 50, .62));
+  border: 1px solid var(--alive-border-soft, rgba(61, 55, 75, .12));
+  border-radius: 999px;
+  background: var(--alive-surface, rgba(255, 255, 255, .48));
+  font-size: .82em;
+  backdrop-filter: blur(10px);
+}
+
+.visit-metric__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #36d399;
+  box-shadow: 0 0 10px rgba(54, 211, 153, .72);
+}
+
+#visit-metric-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.sleeping {
+  color: gray;
+}
+
+.awake {
+  color: #22a676;
+}
+
+.error {
+  color: red;
+}
+
+#hitokoto {
+  border-radius: 0.5rem;
+  padding: 0.8rem 1rem;
+}
+
+#hitokoto_text {
+  color: rgba(180, 40, 200, 0.9);
+}
+
+.light a {
+  color: var(--alive-link, #6348c8);
+}
+
+.light .awake {
+  color: #22a676;
+}
+
+.theme-controls {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  padding: 10px;
+  z-index: 1000;
+}
+
+.opacity-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+}
+
+.opacity-controls button {
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.opacity-controls button:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.light a.sleeping {
+  color: gray !important;
+}
+
+.light a.error {
+  color: red !important;
+}
+
+/* Steam Card */
+.steam_card {
+  text-align: center;
+}
+
+/* 控制栏按钮 */
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: 0.3s;
+  color: var(--text-color);
+  -webkit-appearance: none;
+  /* 兼容 WebKit 内核浏览器 */
+  appearance: none;
+  /* 标准属性，提升兼容性 */
+}
+
+button:hover {
+  background: var(--control-bg);
+}
+
+/* 进度条滑块 */
+/* 滑块thumb样式，默认圆形，滑动时高亮波纹 */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+
+  background: #fff;
+  border: 2.5px solid #1976d2;
+  border-radius: 50%;
+  box-shadow: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+  margin-top: -0px; /* 垂直居中：-(thumb高-track高)/2 */
+  transition: box-shadow 0.22s cubic-bezier(.4,0,.2,1), border-color 0.22s cubic-bezier(.4,0,.2,1);
+}
+input[type="range"]:active::-webkit-slider-thumb,
+input[type="range"]:focus::-webkit-slider-thumb {
+  border-color: #1565c0;
+  box-shadow: 0 0 0 12px #1976d23a, 0 2px 8px rgba(25,118,210,0.17);
+}
