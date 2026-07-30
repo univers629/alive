@@ -72,7 +72,8 @@
             : 0;
         const position = Number(state.position || 0) + sinceUpdate;
         const duration = Number(state.duration || 0);
-        return duration > 0 ? Math.min(position, duration) : position;
+        if (duration <= 0) return position;
+        return state.playing ? position % duration : Math.min(position, duration);
     }
 
     function normalizedLyrics() {
@@ -314,6 +315,16 @@
 
     elements.audio.addEventListener('playing', () => {
         if (joined) updateJoinButton();
+    });
+
+    elements.audio.addEventListener('ended', () => {
+        if (!joined || !state?.playing || !state.audio_url) return;
+        elements.audio.currentTime = hostPosition();
+        elements.audio.play().catch((error) => {
+            playBlocked = true;
+            console.warn('[MusicIsland] 循环续播失败', error);
+            updateJoinButton('浏览器阻止循环续播，请重新点击“一起听”');
+        });
     });
 
     window.addEventListener('alive:update', (event) => {
