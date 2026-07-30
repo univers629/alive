@@ -77,6 +77,14 @@ def project_env(name: str) -> str:
     return ""
 
 
+def server_url(value: str) -> str:
+    """Return an absolute Alive base URL accepted by requests."""
+    value = value.strip().rstrip("/")
+    if "://" not in value:
+        return f"https://{value}"
+    return value
+
+
 def log(message: str) -> None:
     print(f"[{datetime.now():%H:%M:%S}] {message}", flush=True)
 
@@ -794,6 +802,7 @@ def main() -> None:
     parser.add_argument("--once", action="store_true", help="只读取并上报一次，用于测试")
     parser.add_argument("--clear", action="store_true", help="清除 Alive 当前音乐后退出")
     args = parser.parse_args()
+    args.server = server_url(args.server)
     try:
         asyncio.run(run(args))
     except KeyboardInterrupt:

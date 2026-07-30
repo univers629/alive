@@ -54,10 +54,10 @@ function updateHealthStatus(health) {
 
     badge.textContent = stale ? '已保存 · 等待新数据' : '实时身体数据';
     setText('health-heart-rate', Number.isFinite(Number(heartRate)) ? String(heartRate) : '—');
-    setText('health-resting-rate', Number.isFinite(Number(resting)) ? `静息 ${resting}` : '暂无静息心率');
+    setText('health-resting-rate', resting != null && Number.isFinite(Number(resting)) ? `静息 ${resting}` : '暂无静息心率');
     setText(
         'health-heart-range',
-        Number.isFinite(Number(minimum)) && Number.isFinite(Number(maximum))
+        minimum != null && maximum != null && Number.isFinite(Number(minimum)) && Number.isFinite(Number(maximum))
             ? `今日 ${minimum}–${maximum}`
             : '暂无今日范围'
     );
