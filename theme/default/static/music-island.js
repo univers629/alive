@@ -256,12 +256,13 @@
         elements.ambient.removeAttribute('src');
     });
 
-    elements.join.addEventListener('click', (event) => {
+    elements.join.addEventListener('click', async (event) => {
         event.stopPropagation();
         if (joined) {
             leaveTogether();
             return;
         }
+        await refreshMusicState();
         if (!state?.audio_url) return;
         if (!state.playing) {
             updateJoinButton('机主已暂停，继续播放后再点“一起听”');
@@ -332,7 +333,7 @@
     });
 
     function refreshMusicState() {
-        fetch('/api/music/query', { cache: 'no-store' })
+        return fetch('/api/music/query', { cache: 'no-store' })
             .then((response) => response.json())
             .then((data) => setState(data.music))
             .catch((error) => console.warn('[MusicIsland] 音乐状态加载失败', error));
