@@ -1,6 +1,6 @@
 from time import time
 
-from fastapi_data import Data, _DeviceStatusData
+from fastapi_data import Data, _DeviceStatusData, _MusicStateData
 from models import ConfigModel
 
 
@@ -139,6 +139,29 @@ def test_netease_stream_never_uses_alive_local_audio(tmp_path):
         assert public["source_mode"] == "netease-api"
         assert public["audio_url"] == "https://example.test/temporary"
         assert data.music_audio_path("not-a-local-token") is None
+    finally:
+        data.close()
+
+
+def test_playing_music_ignores_repeated_end_position_and_wraps(tmp_path):
+    config = ConfigModel()
+    config.main.database = "sqlite:///:memory:"
+    data = Data(config, start_scheduler=False)
+    payload = {
+        "title": "循环歌曲",
+        "artist": "测试歌手",
+        "duration": 230,
+        "position": 228,
+        "playing": True,
+    }
+    try:
+        data.music_set(payload)
+        with data.session() as session:
+            session.get(_MusicStateData, 0).updated_at = time() - 5
+
+        state = data.music_set({**payload, "position": 230})
+
+        assert 2 <= state["position"] <= 5
     finally:
         data.close()
 

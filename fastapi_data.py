@@ -853,11 +853,18 @@ class Data:
                 # Blend small corrections into the continuous server clock and only
                 # treat a large discontinuity as a real owner seek.
                 predicted = state.position + max(0, now - state.updated_at)
+                if duration > 0:
+                    predicted %= duration
+                endpoint_sentinel = duration > 0 and (
+                    position <= 0.5 or position >= duration - 0.5
+                )
                 drift = position - predicted
-                if abs(drift) < 8:
+                if endpoint_sentinel:
+                    position = predicted
+                elif abs(drift) < 8:
                     position = predicted + drift * 0.15
                     if duration > 0:
-                        position = min(position, duration)
+                        position %= duration
             meta = session.get(_MusicPlayerMetaData, 0)
             if meta is None:
                 meta = _MusicPlayerMetaData(id=0)
