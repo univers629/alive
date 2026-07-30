@@ -843,28 +843,6 @@ class Data:
             if state is None:
                 state = _MusicStateData(id=0)
                 session.add(state)
-            elif (
-                state.title == payload.get("title", "")
-                and state.artist == payload.get("artist", "")
-                and state.playing
-                and bool(payload.get("playing"))
-            ):
-                # Windows media-session positions can wobble around each heartbeat.
-                # Blend small corrections into the continuous server clock and only
-                # treat a large discontinuity as a real owner seek.
-                predicted = state.position + max(0, now - state.updated_at)
-                if duration > 0:
-                    predicted %= duration
-                endpoint_sentinel = duration > 0 and (
-                    position <= 0.5 or position >= duration - 0.5
-                )
-                drift = position - predicted
-                if endpoint_sentinel:
-                    position = predicted
-                elif abs(drift) < 8:
-                    position = predicted + drift * 0.15
-                    if duration > 0:
-                        position %= duration
             meta = session.get(_MusicPlayerMetaData, 0)
             if meta is None:
                 meta = _MusicPlayerMetaData(id=0)

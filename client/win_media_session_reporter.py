@@ -787,9 +787,17 @@ async def run(args: argparse.Namespace) -> None:
                             playing=playing.playing,
                         )
                 if is_netease and netease_track:
-                    playing = reporter.continuous_netease_position(
-                        playing, netease_track.song_id
-                    )
+                    elog_playing = netease.now_playing()
+                    if elog_playing and normalized(elog_playing.title) == normalized(playing.title):
+                        playing = NowPlaying(
+                            source_id=playing.source_id,
+                            title=playing.title,
+                            artist=playing.artist,
+                            album=playing.album,
+                            duration=playing.duration or elog_playing.duration,
+                            position=elog_playing.position,
+                            playing=playing.playing,
+                        )
                 local_track = None if is_netease else library.match(
                     playing.title, playing.artist
                 )
