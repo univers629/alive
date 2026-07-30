@@ -446,15 +446,14 @@
   border-radius: 999px;
   background: linear-gradient(180deg, #ff7285, #e3365b);
   box-shadow: 0 0 8px rgba(227, 54, 91, .32);
-  animation: heart-card-pulse 1.3s ease-in-out infinite alternate;
 }
 
 .heart-card__pulse i:nth-child(2),
-.heart-card__pulse i:nth-child(7) { height: 15px; animation-delay: -.6s; }
+.heart-card__pulse i:nth-child(7) { height: 15px; }
 .heart-card__pulse i:nth-child(3),
-.heart-card__pulse i:nth-child(6) { height: 25px; animation-delay: -.35s; }
-.heart-card__pulse i:nth-child(4) { height: 33px; animation-delay: -.8s; }
-.heart-card__pulse i:nth-child(5) { height: 18px; animation-delay: -.15s; }
+.heart-card__pulse i:nth-child(6) { height: 25px; }
+.heart-card__pulse i:nth-child(4) { height: 33px; }
+.heart-card__pulse i:nth-child(5) { height: 18px; }
 
 .steps-card__reading {
   position: relative;
@@ -513,11 +512,6 @@
 @keyframes device-card-in {
   from { opacity: 0; transform: translateY(12px) scale(.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes heart-card-pulse {
-  from { transform: scaleY(.58); opacity: .58; }
-  to { transform: scaleY(1); opacity: 1; }
 }
 
 @media (max-width: 720px) {
