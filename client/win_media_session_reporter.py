@@ -553,6 +553,7 @@ class Reporter:
         self.uploaded_covers: dict[str, str] = {}
         self.last_signature = ""
         self.last_sent_at = 0.0
+        self.last_sent_position = -1.0
         self.was_active = False
         self.netease_position_id = ""
         self.netease_position = 0.0
@@ -810,6 +811,10 @@ async def run(args: argparse.Namespace) -> None:
                 should_send = (
                     args.once
                     or signature != reporter.last_signature
+                    or (
+                        reporter.last_sent_position >= 0
+                        and abs(playing.position - reporter.last_sent_position) >= 5
+                    )
                     or now - reporter.last_sent_at >= 10
                 )
                 if should_send:
@@ -821,6 +826,7 @@ async def run(args: argparse.Namespace) -> None:
                             log("尚未取得网易云歌曲 ID，本次仅显示媒体会话信息。")
                     reporter.last_signature = signature
                     reporter.last_sent_at = now
+                    reporter.last_sent_position = playing.position
                 if args.once:
                     return
         except requests.RequestException as error:
