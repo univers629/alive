@@ -31,6 +31,11 @@ body > .container {
     padding-top: calc(60px + env(safe-area-inset-top));
   }
 
+  body > .container {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
   body.music-island-visible {
     padding-bottom: calc(128px + env(safe-area-inset-bottom));
   }

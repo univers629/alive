@@ -360,7 +360,10 @@ class NeteaseDetector:
         if self._elog_playing:
             position += max(0, clock - self._elog_clock)
         if self._elog_track and self._elog_track.duration > 0:
-            position = min(position, self._elog_track.duration)
+            duration = self._elog_track.duration
+            # Some 网易云 versions do not log a seek back to zero for single-track
+            # repeat, even though playback remains active.
+            position = position % duration if self._elog_playing else min(position, duration)
         return max(0, position)
 
     def _set_elog_playing(self, playing: bool, now: float) -> None:
