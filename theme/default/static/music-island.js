@@ -331,10 +331,17 @@
         if (event.detail?.music) setState(event.detail.music);
     });
 
-    fetch('/api/music/query')
-        .then((response) => response.json())
-        .then((data) => setState(data.music))
-        .catch((error) => console.warn('[MusicIsland] 音乐状态加载失败', error));
+    function refreshMusicState() {
+        fetch('/api/music/query', { cache: 'no-store' })
+            .then((response) => response.json())
+            .then((data) => setState(data.music))
+            .catch((error) => console.warn('[MusicIsland] 音乐状态加载失败', error));
+    }
+
+    refreshMusicState();
+    // SSE normally carries music updates; polling keeps playback position in sync
+    // when a proxy buffers or omits an update event.
+    window.setInterval(refreshMusicState, 2000);
 
     window.setInterval(updateProgress, 250);
 })();
