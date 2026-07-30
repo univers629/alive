@@ -1,5 +1,8 @@
 #main.card {
+  box-sizing: border-box;
   width: min(1080px, calc(100% - 40px));
+  margin-right: auto;
+  margin-left: auto;
   padding: 4.7rem clamp(1rem, 3vw, 2.4rem) 2.2rem;
 }
 
