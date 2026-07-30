@@ -109,7 +109,6 @@
 }
 
 .device-card {
-  --device-glow: rgba(112, 101, 255, .32);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -130,29 +129,13 @@
   animation-delay: calc(var(--device-index, 0) * 55ms);
 }
 
-.device-card::before {
-  content: "";
-  position: absolute;
-  width: 150px;
-  height: 150px;
-  top: -92px;
-  right: -70px;
-  border-radius: 50%;
-  background: var(--device-glow);
-  filter: blur(18px);
-  pointer-events: none;
-}
-
 .device-card:hover {
   transform: translateY(-5px);
   border-color: rgba(255, 255, 255, .72);
   box-shadow: 0 20px 46px rgba(24, 20, 35, .18), inset 0 1px 0 rgba(255, 255, 255, .62);
 }
 
-.device-card--active { --device-glow: rgba(55, 213, 151, .4); }
-.device-card--idle { --device-glow: rgba(255, 190, 91, .34); }
 .device-card--offline {
-  --device-glow: rgba(135, 138, 153, .24);
   opacity: .8;
 }
 
