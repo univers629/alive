@@ -371,7 +371,11 @@ def static_proxy(request: Request, filename: str):
 def static_themed(request: Request, theme: str, filename: str):
     file = _safe_file(Path(u.get_path("theme", is_dir=True)) / theme / "static", filename)
     if file:
-        return FileResponse(file, media_type=guess_type(filename)[0])
+        return FileResponse(
+            file,
+            media_type=guess_type(filename)[0],
+            headers={"Cache-Control": "no-cache"},
+        )
     if theme != "default":
         query = f"?{request.url.query}" if request.url.query else ""
         return RedirectResponse(
