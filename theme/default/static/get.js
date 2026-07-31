@@ -89,6 +89,112 @@ function updateHealthStatus(health) {
     }
 }
 
+function setTextIfChanged(element, value) {
+    const text = String(value);
+    if (element && element.textContent !== text) element.textContent = text;
+}
+
+function createDeviceCard(device, index, timeout, now, deviceIcons) {
+    const card = document.createElement('article');
+    card.className = 'device-card';
+    card.dataset.deviceId = String(device.id);
+    card.innerHTML = `
+        <div class="device-card__top">
+            <div class="device-card__identity">
+                <span class="device-card__icon" aria-hidden="true"></span>
+                <div class="device-card__name"><strong></strong><span></span></div>
+            </div>
+            <span class="device-card__state"><i class="device-card__dot" aria-hidden="true"></i><span></span></span>
+        </div>
+        <div class="device-card__app">
+            <span class="device-card__app-icon" aria-hidden="true"></span>
+            <div class="device-card__app-copy"><small>CURRENT APP</small><span></span></div>
+        </div>
+        <div class="device-card__bottom">
+            <div class="device-card__meta"></div>
+            <span class="device-card__footer"></span>
+        </div>`;
+    updateDeviceCard(card, device, index, timeout, now, deviceIcons);
+    return card;
+}
+
+function updateDeviceCard(card, device, index, timeout, now, deviceIcons) {
+    const fields = device.fields || {};
+    const fresh = timeout <= 0 || now - Number(device.last_updated || 0) <= timeout;
+    const state = fresh ? (device.using ? 'active' : 'idle') : 'offline';
+    const stateLabel = state === 'active' ? '使用中' : state === 'idle' ? '在线空闲' : '离线';
+    const appName = sliceText(String(device.status || '暂无活动'), metadata.status.device_slice || 80);
+    const appInitial = Array.from(appName.trim())[0] || 'A';
+    const updated = getFormattedTime(new Date(device.last_updated * 1000));
+
+    const stateClass = `device-card--${state}`;
+    if (!card.classList.contains(stateClass)) {
+        card.classList.remove('device-card--active', 'device-card--idle', 'device-card--offline');
+        card.classList.add(stateClass);
+    }
+    if (card.style.getPropertyValue('--device-index') !== String(index)) {
+        card.style.setProperty('--device-index', String(index));
+    }
+    if (card.title !== updated) card.title = updated;
+
+    const icon = card.querySelector('.device-card__icon');
+    const iconKey = device.profile?.icon_key;
+    if (iconKey === 'bilibili') {
+        if (!icon.querySelector('.bilibili-tv-icon')) {
+            icon.replaceChildren(Object.assign(document.createElement('span'), { className: 'bilibili-tv-icon' }));
+        }
+    } else {
+        setTextIfChanged(icon, deviceIcons[iconKey] || deviceIcons.other);
+    }
+
+    setTextIfChanged(card.querySelector('.device-card__name strong'), device.show_name || device.id);
+    setTextIfChanged(card.querySelector('.device-card__name span'), device.id);
+    setTextIfChanged(card.querySelector('.device-card__state > span'), stateLabel);
+
+    const appIcon = card.querySelector('.device-card__app-icon');
+    const appIconUrl = String(fields.app_icon_url || '');
+    const existingImage = appIcon.querySelector('img');
+    if (appIconUrl) {
+        if (!existingImage || existingImage.getAttribute('src') !== appIconUrl) {
+            const image = document.createElement('img');
+            image.src = appIconUrl;
+            image.alt = '';
+            image.loading = 'lazy';
+            appIcon.replaceChildren(image);
+        }
+    } else {
+        setTextIfChanged(appIcon, appInitial.toUpperCase());
+    }
+    const appText = card.querySelector('.device-card__app-copy > span');
+    setTextIfChanged(appText, appName);
+    if (appText.title !== String(device.status || '')) appText.title = String(device.status || '');
+
+    const batteryRaw = fields.battery ?? fields.battery_percent ?? fields.power;
+    const battery = Number(batteryRaw);
+    const network = fields.network_type || fields.network || fields.connection_type || '';
+    const platform = fields.platform || fields.os || '';
+    const chips = [];
+    if (Number.isFinite(battery)) {
+        chips.push(`🔋 ${Math.max(0, Math.min(100, Math.round(battery)))}%${fields.charging ? ' · 充电中' : ''}`);
+    }
+    if (network) chips.push(`◉ ${String(network)}`);
+    if (platform) chips.push(String(platform));
+    if (!chips.length) chips.push(state === 'offline' ? '等待设备重新上线' : '状态实时同步中');
+
+    const meta = card.querySelector('.device-card__meta');
+    chips.forEach((chip, chipIndex) => {
+        let element = meta.children[chipIndex];
+        if (!element) {
+            element = document.createElement('span');
+            element.className = 'device-card__chip';
+            meta.append(element);
+        }
+        setTextIfChanged(element, chip);
+    });
+    while (meta.children.length > chips.length) meta.lastElementChild.remove();
+    setTextIfChanged(card.querySelector('.device-card__footer'), `更新于 ${updated}`);
+}
+
 function updateDeviceStatus(data) {
     /*
     正常更新状态使用
@@ -132,65 +238,36 @@ function updateDeviceStatus(data) {
     if (deviceStatusElement?.classList.contains('device-grid')) {
         const timeout = Number(metadata?.status?.device_timeout || 150);
         const now = Date.now() / 1000;
-        const cards = devices.map((device, index) => {
-            const fields = device.fields || {};
-            const fresh = timeout <= 0 || now - Number(device.last_updated || 0) <= timeout;
-            const state = fresh ? (device.using ? 'active' : 'idle') : 'offline';
-            const stateLabel = state === 'active' ? '使用中' : state === 'idle' ? '在线空闲' : '离线';
-            const iconKey = device.profile?.icon_key;
-            const icon = iconKey === 'bilibili'
-                ? '<span class="bilibili-tv-icon"></span>'
-                : escapeHtml(deviceIcons[iconKey] || deviceIcons.other);
-            const appName = sliceText(String(device.status || '暂无活动'), metadata.status.device_slice || 80);
-            const appInitial = Array.from(appName.trim())[0] || 'A';
-            const appIconUrl = String(fields.app_icon_url || '');
-            const appIconHtml = appIconUrl
-                ? `<img src="${escapeHtml(appIconUrl)}" alt="" loading="lazy">`
-                : escapeHtml(appInitial.toUpperCase());
-            const batteryRaw = fields.battery ?? fields.battery_percent ?? fields.power;
-            const battery = Number(batteryRaw);
-            const network = fields.network_type || fields.network || fields.connection_type || '';
-            const platform = fields.platform || fields.os || '';
-            const chips = [];
-            if (Number.isFinite(battery)) {
-                chips.push(`🔋 ${Math.max(0, Math.min(100, Math.round(battery)))}%${fields.charging ? ' · 充电中' : ''}`);
-            }
-            if (network) chips.push(`◉ ${String(network)}`);
-            if (platform) chips.push(String(platform));
-            if (!chips.length) chips.push(state === 'offline' ? '等待设备重新上线' : '状态实时同步中');
-            const chipHtml = chips
-                .map((chip) => `<span class="device-card__chip">${escapeHtml(chip)}</span>`)
-                .join('');
-            const updated = getFormattedTime(new Date(device.last_updated * 1000));
+        const existingCards = new Map(
+            [...deviceStatusElement.querySelectorAll(':scope > .device-card[data-device-id]')]
+                .map((card) => [card.dataset.deviceId, card])
+        );
+        const activeIds = new Set(devices.map((device) => String(device.id)));
+        existingCards.forEach((card, deviceId) => {
+            if (!activeIds.has(deviceId)) card.remove();
+        });
+        deviceStatusElement.querySelector('.device-grid__empty')?.remove();
 
-            return `
-<article class="device-card device-card--${state}" style="--device-index:${index}" title="${escapeHtml(updated)}">
-    <div class="device-card__top">
-        <div class="device-card__identity">
-    <span class="device-card__icon" aria-hidden="true">${icon}</span>
-            <div class="device-card__name">
-                <strong>${escapeHtml(device.show_name || device.id)}</strong>
-                <span>${escapeHtml(device.id)}</span>
-            </div>
-        </div>
-        <span class="device-card__state"><i class="device-card__dot" aria-hidden="true"></i>${stateLabel}</span>
-    </div>
-    <div class="device-card__app">
-        <span class="device-card__app-icon" aria-hidden="true">${appIconHtml}</span>
-        <div class="device-card__app-copy">
-            <small>CURRENT APP</small>
-            <span title="${escapeHtml(device.status || '')}">${escapeHtml(appName)}</span>
-        </div>
-    </div>
-    <div class="device-card__bottom">
-        <div class="device-card__meta">${chipHtml}</div>
-        <span class="device-card__footer">更新于 ${escapeHtml(updated)}</span>
-    </div>
-</article>`;
-        }).join('');
-        deviceStatusElement.innerHTML = cards || '<div class="device-grid__empty">还没有公开设备。启动客户端后，设备卡片会自动出现在这里。</div>';
+        devices.forEach((device, index) => {
+            const deviceId = String(device.id);
+            let card = existingCards.get(deviceId);
+            if (card) {
+                updateDeviceCard(card, device, index, timeout, now, deviceIcons);
+            } else {
+                card = createDeviceCard(device, index, timeout, now, deviceIcons);
+            }
+            const currentAtIndex = deviceStatusElement.children[index];
+            if (currentAtIndex !== card) deviceStatusElement.insertBefore(card, currentAtIndex || null);
+        });
+
+        if (!devices.length) {
+            const empty = document.createElement('div');
+            empty.className = 'device-grid__empty';
+            empty.textContent = '还没有公开设备。启动客户端后，设备卡片会自动出现在这里。';
+            deviceStatusElement.append(empty);
+        }
         const deviceCount = document.getElementById('device-count');
-        if (deviceCount) deviceCount.textContent = `${devices.length} 台设备`;
+        setTextIfChanged(deviceCount, `${devices.length} 台设备`);
     } else if (deviceStatusElement) {
         var deviceStatus = '<hr/><b><p class="device-status-title"><i>Device</i> Status</p></b>';
         for (let device of devices) {
