@@ -173,7 +173,7 @@ function renderDeviceList() {
             server: '▤ 服务器',
             game: '🎮 游戏设备',
             other: '◇ 其他',
-            bilibili: '哔 哔哩哔哩'
+            bilibili: '哔哩哔哩'
         };
         for (const [value, label] of Object.entries(iconOptions)) {
             const option = document.createElement('option');

@@ -48,9 +48,23 @@
       return [...select.options];
     }
 
+    function setOptionContent(element, option) {
+      element.replaceChildren();
+      if (option?.value === 'bilibili') {
+        const icon = document.createElement('span');
+        icon.className = 'bilibili-tv-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.textContent = option.textContent;
+        element.append(icon, label);
+      } else {
+        element.textContent = option?.textContent || '';
+      }
+    }
+
     function sync() {
       const selected = select.selectedOptions[0] || options()[0];
-      value.textContent = selected?.textContent || '';
+      setOptionContent(value, selected);
       trigger.disabled = select.disabled;
       trigger.setAttribute('aria-label', select.getAttribute('aria-label') || selected?.textContent || '选择');
       [...menu.children].forEach((item) => {
@@ -67,7 +81,7 @@
         item.role = 'option';
         item.dataset.value = option.value;
         item.dataset.index = String(index);
-        item.textContent = option.textContent;
+        setOptionContent(item, option);
         item.disabled = option.disabled;
         item.setAttribute('aria-selected', String(option.selected));
         item.addEventListener('click', () => {
@@ -112,15 +126,17 @@
     }
 
     const controller = {
-      open() {
+      open(focusOption = false) {
         if (select.disabled) return;
         if (openController && openController !== controller) closeOpenMenu();
         buildMenu();
         positionMenu();
         trigger.setAttribute('aria-expanded', 'true');
         openController = controller;
-        const selected = menu.querySelector('[aria-selected="true"]');
-        (selected || menu.querySelector('.glass-select__option:not(:disabled)'))?.focus();
+        if (focusOption) {
+          const selected = menu.querySelector('[aria-selected="true"]');
+          (selected || menu.querySelector('.glass-select__option:not(:disabled)'))?.focus();
+        }
       },
       close(restoreFocus = false) {
         menu.hidden = true;
@@ -146,7 +162,7 @@
     trigger.addEventListener('keydown', (event) => {
       if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
         event.preventDefault();
-        controller.open();
+        controller.open(true);
       } else if (event.key === 'Escape') {
         controller.close();
       }
@@ -187,7 +203,10 @@
     closeOpenMenu();
   });
   window.addEventListener('resize', () => closeOpenMenu());
-  window.addEventListener('scroll', () => closeOpenMenu(), true);
+  window.addEventListener('scroll', (event) => {
+    if (event.target instanceof Element && event.target.closest('.glass-select__menu')) return;
+    closeOpenMenu();
+  }, true);
 
   window.AliveGlassSelect = {
     enhance,

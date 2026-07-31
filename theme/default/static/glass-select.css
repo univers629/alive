@@ -56,6 +56,9 @@
 
 .glass-select__value {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -115,6 +118,9 @@
   backdrop-filter: blur(30px) saturate(160%);
   -webkit-backdrop-filter: blur(30px) saturate(160%);
   scrollbar-width: thin;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .glass-select__menu[hidden] {
@@ -136,6 +142,32 @@
   font: 540 .76rem/1.25 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
   text-align: left;
   cursor: pointer;
+}
+
+.bilibili-tv-icon {
+  position: relative;
+  width: 22px;
+  height: 15px;
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  border: 2px solid #fb7299;
+  border-radius: 4px;
+  background:
+    radial-gradient(circle at 34% 54%, #fb7299 0 1px, transparent 1.4px),
+    radial-gradient(circle at 66% 54%, #fb7299 0 1px, transparent 1.4px);
+}
+
+.bilibili-tv-icon::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 3px;
+  width: 12px;
+  height: 7px;
+  background:
+    linear-gradient(35deg, transparent 43%, #fb7299 44% 54%, transparent 55%) left / 55% 100% no-repeat,
+    linear-gradient(-35deg, transparent 43%, #fb7299 44% 54%, transparent 55%) right / 55% 100% no-repeat;
 }
 
 .glass-select__option:hover,

@@ -1,8 +1,31 @@
 :root {
+  --music-island-ink: #282532;
+  --music-island-muted: rgba(40, 37, 50, .62);
+  --music-island-faint: rgba(40, 37, 50, .46);
+  --music-island-panel: rgba(249, 250, 253, .94);
+  --music-island-border: rgba(40, 37, 50, .13);
+  --music-island-surface: rgba(40, 37, 50, .065);
+  --music-island-surface-strong: rgba(40, 37, 50, .14);
+  --music-island-shadow: 0 22px 70px rgba(36, 31, 53, .2);
+  --music-island-expanded-shadow: 0 30px 84px rgba(36, 31, 53, .24);
+  --music-island-progress: #6858bb;
+  --music-island-button: #282532;
+  --music-island-button-ink: #fff;
+}
+
+:root[data-color-mode="dark"] {
   --music-island-ink: #f8f8fc;
   --music-island-muted: rgba(248, 248, 252, .58);
-  --music-island-panel: rgba(10, 11, 17, .78);
+  --music-island-faint: rgba(248, 248, 252, .48);
+  --music-island-panel: rgba(10, 11, 17, .9);
   --music-island-border: rgba(255, 255, 255, .16);
+  --music-island-surface: rgba(255, 255, 255, .065);
+  --music-island-surface-strong: rgba(255, 255, 255, .18);
+  --music-island-shadow: 0 22px 70px rgba(0, 0, 0, .44);
+  --music-island-expanded-shadow: 0 34px 100px rgba(0, 0, 0, .54);
+  --music-island-progress: #fff;
+  --music-island-button: rgba(255, 255, 255, .94);
+  --music-island-button-ink: #11131a;
 }
 
 .music-island[hidden] {
@@ -21,7 +44,7 @@
   border-radius: 29px;
   background: var(--music-island-panel);
   box-shadow:
-    0 22px 70px rgba(0, 0, 0, .44),
+    var(--music-island-shadow),
     inset 0 1px 0 rgba(255, 255, 255, .1);
   overflow: hidden;
   isolation: isolate;
@@ -38,57 +61,8 @@
   width: min(430px, calc(100% - 48px));
   border-radius: 32px;
   box-shadow:
-    0 34px 100px rgba(0, 0, 0, .54),
+    var(--music-island-expanded-shadow),
     inset 0 1px 0 rgba(255, 255, 255, .11);
-}
-
-.music-island__ambient {
-  position: absolute;
-  inset: -55%;
-  z-index: -2;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: .74;
-}
-
-.music-island__ambient::after {
-  content: "";
-  position: absolute;
-  inset: 20%;
-  background: linear-gradient(115deg, rgba(14, 15, 24, .28), rgba(7, 7, 12, .9));
-}
-
-.music-island__ambient-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: .56;
-  filter: blur(40px) saturate(1.85) contrast(1.08);
-  transform: scale(1.18);
-}
-
-.music-island__light {
-  position: absolute;
-  width: 50%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  filter: blur(30px);
-  mix-blend-mode: screen;
-  opacity: .56;
-}
-
-.music-island__light--one {
-  top: 10%;
-  left: 8%;
-  background: #7c5cff;
-  animation: music-light-one 7s ease-in-out infinite alternate;
-}
-
-.music-island__light--two {
-  right: 4%;
-  bottom: 8%;
-  background: #ff4d8d;
-  animation: music-light-two 8.5s ease-in-out infinite alternate;
 }
 
 .music-island__summary {
@@ -105,7 +79,7 @@
 }
 
 .music-island__summary:focus-visible {
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .72);
+  box-shadow: inset 0 0 0 2px var(--music-island-ink);
 }
 
 .music-island__cover-shell {
@@ -181,7 +155,7 @@
 }
 
 .music-island__title {
-  color: rgba(255, 255, 255, .98);
+  color: var(--music-island-ink);
   font: 650 15px/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
   letter-spacing: .01em;
 }
@@ -195,7 +169,7 @@
   width: 24px;
   height: 24px;
   justify-self: end;
-  color: rgba(255, 255, 255, .48);
+  color: var(--music-island-faint);
   overflow: visible;
   transition: color 220ms ease;
 }
@@ -216,7 +190,7 @@
 }
 
 .music-island.is-listening .music-island__speaker {
-  color: rgba(255, 255, 255, .96);
+  color: var(--music-island-ink);
 }
 
 .music-island.is-listening .music-island__speaker-wave {
@@ -272,7 +246,7 @@
   bottom: -2px;
   width: 9px;
   height: 9px;
-  border: 2px solid rgba(11, 12, 18, .9);
+  border: 2px solid var(--music-island-panel);
   border-radius: 50%;
   background: #65f0b2;
   box-shadow: 0 0 9px rgba(101, 240, 178, .86);
@@ -309,7 +283,7 @@
   height: 4px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255, 255, 255, .18);
+  background: var(--music-island-surface-strong);
   cursor: default;
 }
 
@@ -318,8 +292,7 @@
   width: 0;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(255, 255, 255, .72), #fff);
-  box-shadow: 0 0 14px rgba(255, 255, 255, .42);
+  background: var(--music-island-progress);
   transition: width 220ms linear;
 }
 
@@ -352,9 +325,9 @@
   align-items: center;
   margin: 11px 0 10px;
   padding: 9px 13px;
-  border: 1px solid rgba(255, 255, 255, .11);
+  border: 1px solid var(--music-island-border);
   border-radius: 17px;
-  background: rgba(255, 255, 255, .065);
+  background: var(--music-island-surface);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
 }
 
@@ -364,8 +337,8 @@
   display: grid;
   place-items: center;
   border-radius: 9px;
-  color: rgba(255, 255, 255, .9);
-  background: rgba(255, 255, 255, .1);
+  color: var(--music-island-ink);
+  background: var(--music-island-surface-strong);
   font: 650 13px/1 "Segoe UI", sans-serif;
 }
 
@@ -373,7 +346,7 @@
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  color: rgba(255, 255, 255, .91);
+  color: var(--music-island-ink);
   font: 550 13px/1.45 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -415,7 +388,7 @@
 }
 
 .music-island:not(.is-playing) .music-island__owner-dot {
-  background: rgba(255, 255, 255, .38);
+  background: var(--music-island-faint);
   box-shadow: none;
 }
 
@@ -423,37 +396,29 @@
   flex: none;
   min-width: 84px;
   padding: 8px 15px;
-  border: 1px solid rgba(255, 255, 255, .18);
+  border: 1px solid var(--music-island-border);
   border-radius: 999px;
-  color: #11131a;
-  background: rgba(255, 255, 255, .94);
+  color: var(--music-island-button-ink);
+  background: var(--music-island-button);
   box-shadow: 0 7px 24px rgba(0, 0, 0, .2);
   font: 650 12px/1.25 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
   cursor: pointer;
 }
 
 .music-island__join:disabled {
-  color: rgba(255, 255, 255, .55);
-  background: rgba(255, 255, 255, .1);
+  color: var(--music-island-faint);
+  background: var(--music-island-surface);
   box-shadow: none;
   cursor: not-allowed;
 }
 
 .music-island.is-listening .music-island__join {
-  color: #fff;
-  background: rgba(255, 255, 255, .1);
+  color: var(--music-island-ink);
+  background: var(--music-island-surface);
 }
 
 @keyframes music-cover-spin {
   to { transform: rotate(360deg); }
-}
-
-@keyframes music-light-one {
-  to { transform: translate(52%, 18%) scale(1.22); background: #25d8c2; }
-}
-
-@keyframes music-light-two {
-  to { transform: translate(-45%, -26%) scale(.84); background: #825bff; }
 }
 
 @keyframes music-lyric-change {

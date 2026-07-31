@@ -12,7 +12,6 @@
     server: '▤',
     game: '🎮',
      other: '◇',
-     bilibili: '哔',
   };
   const stateLabels = {
     active: '使用中',
@@ -72,9 +71,14 @@
 
       const icon = document.createElement('span');
       icon.className = 'details-device-icon';
-      if (device.profile?.icon_key === 'bilibili') icon.classList.add('details-device-icon--bilibili');
       icon.setAttribute('aria-hidden', 'true');
-      icon.textContent = deviceIcons[device.profile?.icon_key] || deviceIcons.other;
+      if (device.profile?.icon_key === 'bilibili') {
+        const bilibiliIcon = document.createElement('span');
+        bilibiliIcon.className = 'bilibili-tv-icon';
+        icon.append(bilibiliIcon);
+      } else {
+        icon.textContent = deviceIcons[device.profile?.icon_key] || deviceIcons.other;
+      }
 
       const copy = document.createElement('div');
       copy.className = 'details-device-copy';

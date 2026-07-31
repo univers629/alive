@@ -126,7 +126,7 @@ function updateDeviceStatus(data) {
         server: '▤',
         game: '🎮',
         other: '◇',
-        bilibili: '哔'
+        bilibili: ''
     };
 
     if (deviceStatusElement?.classList.contains('device-grid')) {
@@ -138,7 +138,9 @@ function updateDeviceStatus(data) {
             const state = fresh ? (device.using ? 'active' : 'idle') : 'offline';
             const stateLabel = state === 'active' ? '使用中' : state === 'idle' ? '在线空闲' : '离线';
             const iconKey = device.profile?.icon_key;
-            const icon = deviceIcons[iconKey] || deviceIcons.other;
+            const icon = iconKey === 'bilibili'
+                ? '<span class="bilibili-tv-icon"></span>'
+                : escapeHtml(deviceIcons[iconKey] || deviceIcons.other);
             const appName = sliceText(String(device.status || '暂无活动'), metadata.status.device_slice || 80);
             const appInitial = Array.from(appName.trim())[0] || 'A';
             const appIconUrl = String(fields.app_icon_url || '');
@@ -165,7 +167,7 @@ function updateDeviceStatus(data) {
 <article class="device-card device-card--${state}" style="--device-index:${index}" title="${escapeHtml(updated)}">
     <div class="device-card__top">
         <div class="device-card__identity">
-    <span class="device-card__icon${iconKey === 'bilibili' ? ' device-card__icon--bilibili' : ''}" aria-hidden="true">${icon}</span>
+    <span class="device-card__icon" aria-hidden="true">${icon}</span>
             <div class="device-card__name">
                 <strong>${escapeHtml(device.show_name || device.id)}</strong>
                 <span>${escapeHtml(device.id)}</span>
@@ -218,7 +220,7 @@ ${sliceText(escapedAppName, metadata.status.device_slice).replaceAll('\n', ' <br
             const iconKey = device.profile?.icon_key;
             const icon = deviceIcons[iconKey] || deviceIcons.other;
             const iconMarkup = iconKey === 'bilibili'
-                ? '<span class="device-card__icon--bilibili">哔</span>'
+                ? '<span class="bilibili-tv-icon" aria-hidden="true"></span>'
                 : icon;
             deviceStatus += `${iconMarkup} ${escapeHtml(device.show_name)}: ${device_status} <br/>`;
         }

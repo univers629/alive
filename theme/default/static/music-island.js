@@ -5,7 +5,6 @@
     const elements = {
         summary: root.querySelector('.music-island__summary'),
         cover: root.querySelector('.music-island__cover'),
-        ambient: root.querySelector('.music-island__ambient-image'),
         title: root.querySelector('.music-island__title'),
         artist: root.querySelector('.music-island__artist'),
         speaker: root.querySelector('.music-island__speaker'),
@@ -114,7 +113,6 @@
         const coverUrl = String(url || '');
         root.classList.toggle('has-cover', Boolean(coverUrl));
         elements.cover.src = coverUrl;
-        elements.ambient.src = coverUrl;
         elements.cover.alt = coverUrl && state ? `${state.title} 的封面` : '';
     }
 
@@ -211,7 +209,6 @@
 
     elements.cover.addEventListener('error', () => {
         root.classList.remove('has-cover');
-        elements.ambient.removeAttribute('src');
     });
 
     elements.join.addEventListener('click', (event) => {
