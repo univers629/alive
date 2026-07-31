@@ -16,7 +16,7 @@ from typing import Any, Iterator
 
 import pytz
 import schedule
-from sqlalchemy import JSON, Boolean, Float, Integer, String, Text, create_engine, func, select
+from sqlalchemy import JSON, Boolean, Float, Integer, String, Text, create_engine, func, inspect, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, scoped_session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -163,6 +163,8 @@ class _CommentData(Base):
     color: Mapped[str] = mapped_column(String(16), nullable=False, default="violet")
     visitor_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     created_at: Mapped[float] = mapped_column(Float, nullable=False, default=time)
+    is_favorite: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 def _database_url(configured_url: str) -> str:
@@ -212,6 +214,7 @@ class Data:
     def ensure_schema(self) -> None:
         """Create missing tables and singleton rows (safe to call on startup)."""
         Base.metadata.create_all(self.engine)
+        self._migrate_schema()
 
         with self.session() as session:
             if session.scalar(select(_MainData).limit(1)) is None:
@@ -220,6 +223,20 @@ class Data:
                 session.add(_MetricsMetaData(id=0))
             if session.scalar(select(_SiteSettingsData).limit(1)) is None:
                 session.add(_SiteSettingsData(id=0))
+
+    def _migrate_schema(self) -> None:
+        """Apply small idempotent migrations for databases created by older releases."""
+        if self.engine.dialect.name != "sqlite":
+            return
+        columns = {column["name"] for column in inspect(self.engine).get_columns("comments")}
+        missing = {
+            "is_favorite": "ALTER TABLE comments ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0",
+            "is_pinned": "ALTER TABLE comments ADD COLUMN is_pinned BOOLEAN NOT NULL DEFAULT 0",
+        }
+        with self.engine.begin() as connection:
+            for name, statement in missing.items():
+                if name not in columns:
+                    connection.execute(text(statement))
 
     @contextmanager
     def session(self) -> Iterator[Any]:
@@ -384,6 +401,7 @@ class Data:
                 key=lambda item: (
                     item[1]["profile"]["sort_order"],
                     item[1]["show_name"].casefold(),
+                    item[0],
                 ),
             )
         )
@@ -416,7 +434,7 @@ class Data:
         id: str,
         display_name: str,
         icon_key: str,
-        sort_order: int,
+        sort_order: int | None,
         is_public: bool,
     ) -> dict[str, Any]:
         allowed_icons = {
@@ -428,6 +446,7 @@ class Data:
             "server",
             "game",
             "other",
+            "bilibili",
         }
         if not id:
             raise u.APIUnsuccessful(400, "device id cannot be empty")
@@ -435,7 +454,7 @@ class Data:
             raise u.APIUnsuccessful(400, "display_name is too long")
         if icon_key not in allowed_icons:
             raise u.APIUnsuccessful(400, "unsupported icon_key")
-        if not -100000 <= sort_order <= 100000:
+        if sort_order is not None and not -100000 <= sort_order <= 100000:
             raise u.APIUnsuccessful(400, "sort_order is outside the allowed range")
 
         with self._write_lock, self.session() as session:
@@ -448,12 +467,43 @@ class Data:
                 session.add(profile)
             profile.display_name = display_name.strip()
             profile.icon_key = icon_key
-            profile.sort_order = sort_order
+            if sort_order is not None:
+                profile.sort_order = sort_order
             profile.is_public = is_public
             now = time()
             self._main(session).last_updated = now
             session.flush()
             return self._serialize_device(device, profile)
+
+    def device_reorder(self, id: str, direction: str) -> dict[str, dict[str, Any]]:
+        if not id:
+            raise u.APIUnsuccessful(400, "device id cannot be empty")
+        if direction not in {"up", "down"}:
+            raise u.APIUnsuccessful(400, "direction must be up or down")
+        with self._write_lock, self.session() as session:
+            devices = list(session.scalars(select(_DeviceStatusData)).all())
+            target = session.get(_DeviceStatusData, id)
+            if target is None:
+                raise u.APIUnsuccessful(404, "Device not found")
+            profiles = {}
+            for device in devices:
+                profile = session.get(_DeviceProfileData, device.id)
+                if profile is None:
+                    profile = _DeviceProfileData(id=device.id, sort_order=0)
+                    session.add(profile)
+                profiles[device.id] = profile
+            ordered = sorted(
+                devices,
+                key=lambda device: (profiles[device.id].sort_order, device.show_name.casefold(), device.id),
+            )
+            index = next(index for index, device in enumerate(ordered) if device.id == id)
+            other_index = index - 1 if direction == "up" else index + 1
+            if 0 <= other_index < len(ordered):
+                ordered[index], ordered[other_index] = ordered[other_index], ordered[index]
+            for sort_order, device in enumerate(ordered):
+                profiles[device.id].sort_order = sort_order
+            self._main(session).last_updated = time()
+        return self.admin_device_list
 
     def device_get(self, id: str) -> _DeviceStatusData | None:
         with self.session() as session:
@@ -592,19 +642,33 @@ class Data:
             "content": comment.content,
             "color": comment.color,
             "created_at": comment.created_at,
+            "favorite": bool(comment.is_favorite),
+            "pinned": bool(comment.is_pinned),
         }
 
     def comment_list(self, limit: int = 50) -> list[dict[str, Any]]:
-        limit = max(1, min(int(limit), 100))
+        limit = max(1, min(int(limit), 300))
         with self.session() as session:
-            comments = list(
-                session.scalars(
-                    select(_CommentData)
-                    .order_by(_CommentData.id.desc())
-                    .limit(limit)
+            pinned = list(session.scalars(
+                select(_CommentData).where(_CommentData.is_pinned.is_(True)).order_by(_CommentData.id.desc())
+            ).all())
+            selected = {comment.id: comment for comment in pinned[:limit]}
+            if len(selected) < limit:
+                recent = session.scalars(
+                    select(_CommentData).where(_CommentData.is_pinned.is_(False))
+                    .order_by(_CommentData.id.desc()).limit(limit - len(selected))
                 ).all()
-            )
-        return [self._serialize_comment(comment) for comment in reversed(comments)]
+                selected.update({comment.id: comment for comment in recent})
+        return [self._serialize_comment(comment) for comment in sorted(selected.values(), key=lambda item: item.id)]
+
+    def comment_admin_list(self) -> list[dict[str, Any]]:
+        with self.session() as session:
+            comments = list(session.scalars(
+                select(_CommentData).order_by(
+                    _CommentData.is_pinned.desc(), _CommentData.is_favorite.desc(), _CommentData.id.desc()
+                ).limit(300)
+            ).all())
+        return [self._serialize_comment(comment) for comment in comments]
 
     def comment_count(self, since: float | None = None) -> int:
         statement = select(func.count()).select_from(_CommentData)
@@ -663,6 +727,23 @@ class Data:
                 return False
             session.delete(comment)
             return True
+
+    def comment_update(self, comment_id: int, favorite: bool, pinned: bool) -> dict[str, Any] | None:
+        with self._write_lock, self.session() as session:
+            comment = session.get(_CommentData, comment_id)
+            if comment is None:
+                return None
+            comment.is_favorite = favorite
+            comment.is_pinned = pinned
+            session.flush()
+            return self._serialize_comment(comment)
+
+    def comment_clear(self) -> int:
+        with self._write_lock, self.session() as session:
+            comments = list(session.scalars(select(_CommentData)).all())
+            for comment in comments:
+                session.delete(comment)
+            return len(comments)
 
     @staticmethod
     def _serialize_health(state: _HealthStateData | None, timeout: int = 0) -> dict[str, Any]:

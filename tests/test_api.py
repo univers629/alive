@@ -553,6 +553,63 @@ def test_public_comments_are_persistent_rate_limited_and_admin_removable():
         assert comment["id"] not in remaining_ids
 
 
+def test_admin_comment_flags_reorder_and_panel_controls():
+    headers = {"Authorization": "Bearer test-secret-1234"}
+    with TestClient(main.app) as client:
+        created = client.post(
+            "/api/comments/create",
+            headers={"X-Forwarded-For": "198.51.100.31"},
+            json={"content": "可管理评论"},
+        )
+        assert created.status_code == 200
+        comment_id = created.json()["comment"]["id"]
+        updated = client.post(
+            "/api/admin/comments/update",
+            headers=headers,
+            json={"id": comment_id, "favorite": True, "pinned": True},
+        )
+        assert updated.status_code == 200
+        assert updated.json()["comment"]["favorite"] is True
+        assert updated.json()["comment"]["pinned"] is True
+        assert client.get("/api/admin/comments/update").status_code == 405
+        assert client.post(
+            "/api/admin/comments/update",
+            headers=headers,
+            json={"id": comment_id, "favorite": "yes", "pinned": True},
+        ).status_code == 400
+
+        client.post("/api/device/set", headers=headers, json={"id": "reorder-a", "show_name": "A"})
+        client.post("/api/device/set", headers=headers, json={"id": "reorder-b", "show_name": "B"})
+        client.post("/api/admin/device/profile", headers=headers, json={"id": "reorder-a", "sort_order": 10000})
+        client.post("/api/admin/device/profile", headers=headers, json={"id": "reorder-b", "sort_order": 10001})
+        before = list(client.get("/api/admin/snapshot", headers=headers).json()["devices"])
+        moved = client.post(
+            "/api/admin/device/reorder",
+            headers=headers,
+            json={"id": "reorder-b", "direction": "up"},
+        )
+        assert moved.status_code == 200
+        after = list(moved.json()["devices"])
+        assert after.index("reorder-b") == before.index("reorder-a")
+        assert after.index("reorder-a") == before.index("reorder-b")
+        assert client.post(
+            "/api/admin/device/reorder",
+            headers=headers,
+            json={"id": "reorder-b", "direction": "sideways"},
+        ).status_code == 400
+
+        panel = client.get("/panel", headers=headers)
+        assert 'id="favicon-file" class="visually-hidden-file"' in panel.text
+        assert 'id="choose-favicon-btn"' in panel.text
+        assert 'id="comments-list"' in panel.text
+        assert "id=\"danmaku-enabled\"" in panel.text
+        assert "sort_order" not in panel.text
+        assert "bilibili" in client.get("/static/panel.js").text
+
+        cleared = client.post("/api/admin/comments/clear", headers=headers)
+        assert cleared.status_code == 200
+
+
 def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
     with TestClient(main.app) as client:
         assert client.get("/api/admin/snapshot").status_code == 401

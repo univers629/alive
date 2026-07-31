@@ -2,6 +2,7 @@
 let statusList = [];
 let currentStatus = { 'color': 'sleeping', 'desc': '', 'id': -1, 'name': '未知' };
 let deviceData = {};
+let commentsData = [];
 let privateMode = false;
 let displaySettings = {
     visit_display_mode: 'total',
@@ -35,12 +36,14 @@ async function initPage() {
         const queryData = await queryResponse.json();
         currentStatus = queryData.status;
         deviceData = queryData.devices;
+        commentsData = queryData.comments || [];
         privateMode = queryData.private_mode || false;
         displaySettings = queryData.settings || displaySettings;
 
         // 更新UI
         updateCurrentStatus();
         renderDeviceList();
+        renderComments();
         document.getElementById('private-mode-toggle').checked = privateMode;
         const visitDisplayMode = document.getElementById('visit-display-mode');
         if (visitDisplayMode) {
@@ -127,7 +130,11 @@ function renderDeviceList() {
 
     if (Object.keys(deviceData).length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="7" style="text-align: center;">暂无设备数据</td>';
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = 6;
+        emptyCell.style.textAlign = 'center';
+        emptyCell.textContent = '暂无设备数据';
+        tr.appendChild(emptyCell);
         tbody.appendChild(tr);
         return;
     }
@@ -165,7 +172,8 @@ function renderDeviceList() {
             watch: '⌚ 手表',
             server: '▤ 服务器',
             game: '🎮 游戏设备',
-            other: '◇ 其他'
+            other: '◇ 其他',
+            bilibili: '哔 哔哩哔哩'
         };
         for (const [value, label] of Object.entries(iconOptions)) {
             const option = document.createElement('option');
@@ -175,15 +183,6 @@ function renderDeviceList() {
             iconSelect.appendChild(option);
         }
         tdIcon.appendChild(iconSelect);
-
-        const tdOrder = document.createElement('td');
-        const orderInput = document.createElement('input');
-        orderInput.className = 'panel-input device-order-input';
-        orderInput.type = 'number';
-        orderInput.min = '-100000';
-        orderInput.max = '100000';
-        orderInput.value = String(profile.sort_order || 0);
-        tdOrder.appendChild(orderInput);
 
         const tdPublic = document.createElement('td');
         const publicInput = document.createElement('input');
@@ -199,6 +198,18 @@ function renderDeviceList() {
         const tdAction = document.createElement('td');
         const actionGroup = document.createElement('div');
         actionGroup.className = 'device-action-group';
+        const position = Object.keys(deviceData).indexOf(deviceId);
+        [['up', '↑', '向上移动', position === 0], ['down', '↓', '向下移动', position === Object.keys(deviceData).length - 1]].forEach(([direction, symbol, label, disabled]) => {
+            const moveButton = document.createElement('button');
+            moveButton.className = 'icon-btn';
+            moveButton.type = 'button';
+            moveButton.textContent = symbol;
+            moveButton.title = label;
+            moveButton.setAttribute('aria-label', label);
+            moveButton.disabled = disabled;
+            moveButton.addEventListener('click', () => reorderDevice(deviceId, direction));
+            actionGroup.appendChild(moveButton);
+        });
         const saveButton = document.createElement('button');
         saveButton.className = 'btn btn-primary';
         saveButton.textContent = '保存';
@@ -206,7 +217,6 @@ function renderDeviceList() {
             saveDeviceProfile(deviceId, {
                 display_name: nameInput.value,
                 icon_key: iconSelect.value,
-                sort_order: Number(orderInput.value),
                 public: publicInput.checked
             });
         });
@@ -217,12 +227,23 @@ function renderDeviceList() {
         tr.appendChild(tdDevice);
         tr.appendChild(tdName);
         tr.appendChild(tdIcon);
-        tr.appendChild(tdOrder);
         tr.appendChild(tdPublic);
         tr.appendChild(tdStatus);
         tr.appendChild(tdAction);
 
         tbody.appendChild(tr);
+    }
+}
+
+async function reorderDevice(deviceId, direction) {
+    try {
+        const response = await postJSON('/api/admin/device/reorder', { id: deviceId, direction });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || '排序失败');
+        deviceData = data.devices || {};
+        renderDeviceList();
+    } catch (error) {
+        alert(`设备排序失败：${error.message || error}`);
     }
 }
 
@@ -242,6 +263,89 @@ async function saveDeviceProfile(deviceId, profile) {
         console.error('保存设备资料失败:', error);
         alert(`保存设备资料失败：${error.message || error}`);
     }
+}
+
+function renderComments() {
+    const container = document.getElementById('comments-list');
+    if (!container) return;
+    container.replaceChildren();
+    if (!commentsData.length) {
+        const empty = document.createElement('p');
+        empty.className = 'comments-empty';
+        empty.textContent = '暂无保留评论。';
+        container.appendChild(empty);
+        return;
+    }
+    commentsData.forEach((comment) => {
+        const row = document.createElement('article');
+        row.className = 'comment-row';
+        const copy = document.createElement('div');
+        copy.className = 'comment-row__copy';
+        const meta = document.createElement('div');
+        meta.className = 'comment-row__meta';
+        const nickname = document.createElement('strong');
+        nickname.textContent = comment.nickname;
+        const date = document.createElement('time');
+        date.textContent = new Date(Number(comment.created_at) * 1000).toLocaleString('zh-CN');
+        meta.append(nickname, date);
+        const state = document.createElement('span');
+        state.className = 'comment-row__state';
+        state.textContent = [comment.pinned ? '已置顶' : '', comment.favorite ? '已收藏' : ''].filter(Boolean).join(' · ') || '普通';
+        meta.appendChild(state);
+        const content = document.createElement('p');
+        content.textContent = comment.content;
+        copy.append(meta, content);
+        const actions = document.createElement('div');
+        actions.className = 'comment-row__actions';
+        [['favorite', comment.favorite ? '取消收藏' : '收藏', comment.favorite ? '★' : '☆'],
+            ['pinned', comment.pinned ? '取消置顶' : '置顶', comment.pinned ? '●' : '○']].forEach(([key, label, symbol]) => {
+            const button = document.createElement('button');
+            button.className = 'icon-btn';
+            button.type = 'button';
+            button.title = label;
+            button.setAttribute('aria-label', label);
+            button.textContent = symbol;
+            button.addEventListener('click', () => updateComment(comment, key));
+            actions.appendChild(button);
+        });
+        const remove = document.createElement('button');
+        remove.className = 'icon-btn icon-btn--danger';
+        remove.type = 'button';
+        remove.title = '删除评论';
+        remove.setAttribute('aria-label', '删除评论');
+        remove.textContent = '×';
+        remove.addEventListener('click', () => removeComment(comment.id));
+        actions.appendChild(remove);
+        row.append(copy, actions);
+        container.appendChild(row);
+    });
+}
+
+async function updateComment(comment, changedKey) {
+    const next = { favorite: Boolean(comment.favorite), pinned: Boolean(comment.pinned) };
+    next[changedKey] = !next[changedKey];
+    const response = await postJSON('/api/admin/comments/update', { id: comment.id, ...next });
+    const data = await response.json();
+    if (!response.ok || !data.success) return alert(data.message || '评论更新失败');
+    commentsData = commentsData.map((item) => item.id === comment.id ? data.comment : item);
+    renderComments();
+}
+
+async function removeComment(commentId) {
+    const response = await postJSON('/api/admin/comments/remove', { id: commentId });
+    const data = await response.json();
+    if (!response.ok || !data.success) return alert(data.message || '删除评论失败');
+    commentsData = commentsData.filter((comment) => comment.id !== commentId);
+    renderComments();
+}
+
+async function clearComments() {
+    if (!confirm('确定清空所有评论吗？此操作不可撤销。')) return;
+    const response = await postJSON('/api/admin/comments/clear');
+    const data = await response.json();
+    if (!response.ok || !data.success) return alert(data.message || '清空评论失败');
+    commentsData = [];
+    renderComments();
 }
 
 async function saveDisplaySettings() {
@@ -293,6 +397,7 @@ async function uploadFavicon() {
         preview.src = data.favicon;
         status.textContent = '网站图标已更新。';
         input.value = '';
+        document.getElementById('favicon-file-name').textContent = '';
     } catch (error) {
         status.textContent = `上传失败：${error.message || error}`;
     }
@@ -536,6 +641,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (faviconFile) {
         faviconFile.addEventListener('change', () => {
             const file = faviconFile.files?.[0];
+            document.getElementById('favicon-file-name').textContent = file ? file.name : '';
             if (!file) return;
             const preview = document.getElementById('favicon-preview');
             const objectUrl = URL.createObjectURL(file);
@@ -543,8 +649,12 @@ document.addEventListener('DOMContentLoaded', function () {
             preview.src = objectUrl;
         });
     }
+    const chooseFaviconBtn = document.getElementById('choose-favicon-btn');
+    if (chooseFaviconBtn) chooseFaviconBtn.addEventListener('click', () => faviconFile?.click());
     const uploadFaviconBtn = document.getElementById('upload-favicon-btn');
     if (uploadFaviconBtn) uploadFaviconBtn.addEventListener('click', uploadFavicon);
+    const clearCommentsBtn = document.getElementById('clear-comments-btn');
+    if (clearCommentsBtn) clearCommentsBtn.addEventListener('click', clearComments);
 
     // 设备删除按钮
     document.addEventListener('click', function (event) {

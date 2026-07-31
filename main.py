@@ -1117,7 +1117,7 @@ def admin_snapshot():
             "music_library": d.music_library,
         },
         "metrics": d.metrics_resp,
-        "comments": d.comment_list(100),
+        "comments": d.comment_admin_list(),
     }
 
 
@@ -1257,10 +1257,12 @@ async def admin_secret(request: Request):
 )
 async def admin_device_profile(request: Request):
     body = await _json_object(request)
-    try:
-        sort_order = int(body.get("sort_order", 0))
-    except (TypeError, ValueError) as exc:
-        raise u.APIUnsuccessful(400, "sort_order must be int") from exc
+    sort_order = None
+    if "sort_order" in body:
+        try:
+            sort_order = int(body["sort_order"])
+        except (TypeError, ValueError) as exc:
+            raise u.APIUnsuccessful(400, "sort_order must be int") from exc
     public_raw = body.get("public", True)
     is_public = public_raw if isinstance(public_raw, bool) else u.tobool(public_raw)
     if is_public is None:
@@ -1273,6 +1275,23 @@ async def admin_device_profile(request: Request):
         is_public=is_public,
     )
     return {"success": True, "device": profile}
+
+
+@app.post(
+    "/api/admin/device/reorder",
+    dependencies=[Depends(require_secret)],
+    tags=["后台管理 / Admin"],
+    summary="相邻移动设备并返回完整排序",
+)
+async def admin_device_reorder(request: Request):
+    body = await _json_object(request)
+    device_id = body.get("id")
+    direction = body.get("direction")
+    if not isinstance(device_id, str) or not device_id:
+        raise u.APIUnsuccessful(400, "device id must be a non-empty string")
+    if direction not in {"up", "down"}:
+        raise u.APIUnsuccessful(400, "direction must be up or down")
+    return {"success": True, "devices": d.device_reorder(device_id, direction)}
 
 
 @app.post(
@@ -1289,6 +1308,36 @@ async def admin_comment_remove(request: Request):
     if not d.comment_remove(comment_id):
         raise u.APIUnsuccessful(404, "Comment not found")
     return {"success": True}
+
+
+@app.post(
+    "/api/admin/comments/update",
+    dependencies=[Depends(require_secret)],
+    tags=["后台管理 / Admin"],
+    summary="修改评论收藏和置顶状态",
+)
+async def admin_comment_update(request: Request):
+    body = await _json_object(request)
+    try:
+        comment_id = int(body.get("id"))
+    except (TypeError, ValueError) as exc:
+        raise u.APIUnsuccessful(400, "comment id must be int") from exc
+    if not isinstance(body.get("favorite"), bool) or not isinstance(body.get("pinned"), bool):
+        raise u.APIUnsuccessful(400, "favorite and pinned must be boolean")
+    comment = d.comment_update(comment_id, body["favorite"], body["pinned"])
+    if comment is None:
+        raise u.APIUnsuccessful(404, "Comment not found")
+    return {"success": True, "comment": comment}
+
+
+@app.post(
+    "/api/admin/comments/clear",
+    dependencies=[Depends(require_secret)],
+    tags=["后台管理 / Admin"],
+    summary="清空所有公开评论",
+)
+def admin_comments_clear():
+    return {"success": True, "removed": d.comment_clear()}
 
 
 async def _panel_authorized(request: Request) -> bool:
@@ -1395,7 +1444,10 @@ POST_ONLY_PATHS = {
     "/api/admin/favicon",
     "/api/admin/secret",
     "/api/admin/device/profile",
+    "/api/admin/device/reorder",
     "/api/admin/comments/remove",
+    "/api/admin/comments/update",
+    "/api/admin/comments/clear",
     "/panel/auth",
     "/panel/logout",
     "/panel/verify",

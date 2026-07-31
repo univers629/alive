@@ -11,7 +11,8 @@
     watch: '⌚',
     server: '▤',
     game: '🎮',
-    other: '◇',
+     other: '◇',
+     bilibili: '哔',
   };
   const stateLabels = {
     active: '使用中',
@@ -71,6 +72,7 @@
 
       const icon = document.createElement('span');
       icon.className = 'details-device-icon';
+      if (device.profile?.icon_key === 'bilibili') icon.classList.add('details-device-icon--bilibili');
       icon.setAttribute('aria-hidden', 'true');
       icon.textContent = deviceIcons[device.profile?.icon_key] || deviceIcons.other;
 

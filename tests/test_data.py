@@ -1,6 +1,7 @@
+import sqlite3
 from time import time
 
-from fastapi_data import Data, _DeviceStatusData, _MusicStateData
+from fastapi_data import Data, _CommentData, _DeviceStatusData, _MusicStateData
 from models import ConfigModel
 
 
@@ -227,3 +228,44 @@ def test_admin_settings_and_device_profile_survive_reopen(tmp_path):
         assert reopened.public_visit_metric["mode"] == "daily"
     finally:
         reopened.close()
+
+
+def test_comment_flags_migrate_and_survive_reopen(tmp_path):
+    database = tmp_path / "alive.db"
+    connection = sqlite3.connect(database)
+    connection.execute("CREATE TABLE comments (id INTEGER PRIMARY KEY AUTOINCREMENT, nickname VARCHAR(24) NOT NULL, content VARCHAR(160) NOT NULL, color VARCHAR(16) NOT NULL, visitor_hash VARCHAR(64) NOT NULL, created_at FLOAT NOT NULL)")
+    connection.execute("INSERT INTO comments (nickname, content, color, visitor_hash, created_at) VALUES ('旧评论', '保留内容', 'violet', 'hash', 1)")
+    connection.commit()
+    connection.close()
+    config = ConfigModel()
+    config.main.database = f"sqlite:///{database.as_posix()}"
+    data = Data(config, start_scheduler=False)
+    try:
+        comment = data.comment_list(10)[0]
+        assert comment["favorite"] is False
+        assert comment["pinned"] is False
+        updated = data.comment_update(comment["id"], True, True)
+        assert updated["favorite"] is True
+        assert updated["pinned"] is True
+    finally:
+        data.close()
+    reopened = Data(config, start_scheduler=False)
+    try:
+        assert reopened.comment_admin_list()[0]["pinned"] is True
+    finally:
+        reopened.close()
+
+
+def test_device_reorder_swaps_adjacent_and_normalizes_profiles():
+    config = ConfigModel()
+    config.main.database = "sqlite:///:memory:"
+    data = Data(config, start_scheduler=False)
+    try:
+        for device_id in ("a", "b", "c"):
+            data.device_set(id=device_id, show_name=device_id.upper())
+        result = data.device_reorder("b", "down")
+        assert list(result) == ["a", "c", "b"]
+        assert [item["profile"]["sort_order"] for item in result.values()] == [0, 1, 2]
+        assert list(data.device_reorder("a", "up")) == ["a", "c", "b"]
+    finally:
+        data.close()

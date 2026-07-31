@@ -51,6 +51,10 @@ Cookie 不包含原始密钥，并使用 `SameSite=Strict`；HTTPS 下还会设�
 | POST | `/api/admin/favicon` | 会话/密钥 | 上传 PNG、JPEG 或 WebP 网站图标 |
 | POST | `/api/admin/secret` | 会话/密钥 | 轮换全局密钥 |
 | POST | `/api/admin/device/profile` | 会话/密钥 | 修改设备显示资料 |
+| POST | `/api/admin/device/reorder` | 会话/密钥 | 将设备与相邻设备交换并规范化顺序 |
+| POST | `/api/admin/comments/remove` | 会话/密钥 | 删除一条评论 |
+| POST | `/api/admin/comments/update` | 会话/密钥 | 修改评论收藏和置顶状态 |
+| POST | `/api/admin/comments/clear` | 会话/密钥 | 清空所有评论 |
 | GET | `/panel` | 会话 | 管理后台页面 |
 | POST | `/panel/auth` | 密钥 | 登录后台 |
 | POST | `/panel/verify` | 会话 | 验证后台会话 |
@@ -261,14 +265,25 @@ X-Alive-Audio-Suffix: .flac
   "id": "desktop",
   "display_name": "书房电脑",
   "icon_key": "laptop",
-  "sort_order": 10,
   "public": true
 }
 ```
 
 `icon_key` 支持 `desktop`、`laptop`、`phone`、`tablet`、`watch`、`server`、
-`game`、`other`。设备资料独立于实时心跳数据；客户端继续上报 `show_name` 时，不会
-覆盖管理员已保存的 `display_name`。
+`game`、`other`、`bilibili`。设备资料独立于实时心跳数据；客户端继续上报 `show_name`
+时，不会覆盖管理员已保存的 `display_name`。后台使用
+`POST /api/admin/device/reorder` 携带 `{"id":"desktop","direction":"up"}`
+进行相邻交换，`direction` 只能是 `up` 或 `down`；顶端上移和底端下移不会改变顺序。
+
+### 后台评论管理
+
+评论快照最多返回保留的 300 条评论，排序为置顶、收藏、最新。更新接口请求体为：
+
+```json
+{"id": 12, "favorite": true, "pinned": false}
+```
+
+评论响应公开返回 `favorite` 和 `pinned` 布尔值，但不会返回 `visitor_hash`。
 
 ## GET 是否会暴露密钥
 
