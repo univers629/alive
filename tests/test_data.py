@@ -143,7 +143,7 @@ def test_netease_stream_never_uses_alive_local_audio(tmp_path):
         data.close()
 
 
-def test_playing_music_ignores_repeated_endpoint_position(tmp_path):
+def test_playing_music_stores_reported_position_without_correction(tmp_path):
     config = ConfigModel()
     config.main.database = "sqlite:///:memory:"
     data = Data(config, start_scheduler=False)
@@ -161,7 +161,7 @@ def test_playing_music_ignores_repeated_endpoint_position(tmp_path):
 
         state = data.music_set({**payload, "position": 230})
 
-        assert 2 <= state["position"] <= 5
+        assert state["position"] == 230
     finally:
         data.close()
 

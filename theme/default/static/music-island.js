@@ -36,9 +36,6 @@
     let loadedAudioUrl = '';
     let playbackUnlocked = false;
     let playBlocked = false;
-    const SOFT_SYNC_TOLERANCE = 0.28;
-    const HARD_SYNC_THRESHOLD = 12;
-    const MAX_RATE_CORRECTION = 0.08;
 
     function setExpanded(expanded) {
         root.classList.toggle('is-expanded', expanded);
@@ -63,17 +60,6 @@
     function formatTime(value) {
         const seconds = Math.max(0, Math.floor(Number(value) || 0));
         return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-    }
-
-    function hostPosition() {
-        if (!state) return 0;
-        const sinceUpdate = state.playing
-            ? Math.max(0, Date.now() / 1000 - Number(state.updated_at || 0))
-            : 0;
-        const position = Number(state.position || 0) + sinceUpdate;
-        const duration = Number(state.duration || 0);
-        if (duration <= 0) return position;
-        return state.playing ? position % duration : Math.min(position, duration);
     }
 
     function normalizedLyrics() {
@@ -113,8 +99,8 @@
             setState(null);
             return;
         }
-        const position = hostPosition();
-        const duration = Number(state.duration || 0);
+        const position = joined ? Number(elements.audio.currentTime || 0) : 0;
+        const duration = Number(elements.audio.duration || state.duration || 0);
         const fraction = duration > 0 ? Math.min(position / duration, 1) : 0;
         const percent = Math.round(fraction * 100);
         elements.progressFill.style.width = `${fraction * 100}%`;
@@ -122,7 +108,6 @@
         elements.elapsed.textContent = formatTime(position);
         elements.duration.textContent = formatTime(duration);
         updateLyric(position);
-        syncJoinedAudio(position);
     }
 
     function setCover(url) {
@@ -169,45 +154,10 @@
         loadedAudioUrl = nextUrl;
         if (nextUrl) {
             elements.audio.src = nextUrl;
+            elements.audio.loop = true;
             elements.audio.load();
         } else {
             elements.audio.removeAttribute('src');
-        }
-    }
-
-    async function syncJoinedAudio(position, force = false) {
-        if (!joined || !state?.audio_url) return;
-        if (!state.playing) {
-            if (!elements.audio.paused) elements.audio.pause();
-            elements.audio.playbackRate = 1;
-            return;
-        }
-        const localPosition = Number(elements.audio.currentTime || 0);
-        const drift = position - localPosition;
-        if (force || Math.abs(drift) >= HARD_SYNC_THRESHOLD) {
-            try {
-                elements.audio.currentTime = position;
-                elements.audio.playbackRate = 1;
-            } catch (_) {
-                // Metadata may not be ready yet; loadedmetadata retries below.
-            }
-        } else if (Math.abs(drift) <= SOFT_SYNC_TOLERANCE) {
-            elements.audio.playbackRate = 1;
-        } else {
-            const correction = Math.max(
-                -MAX_RATE_CORRECTION,
-                Math.min(MAX_RATE_CORRECTION, drift * 0.035)
-            );
-            elements.audio.playbackRate = 1 + correction;
-        }
-        if (elements.audio.paused && playbackUnlocked && !playBlocked) {
-            try {
-                await elements.audio.play();
-            } catch (error) {
-                playBlocked = true;
-                console.warn('[MusicIsland] 浏览器暂未允许播放音频', error);
-                updateJoinButton('浏览器阻止播放，请再次点击“一起听”');
-            }
         }
     }
 
@@ -231,8 +181,11 @@
             return;
         }
 
-        const previousAudioUrl = state?.audio_url || '';
+        const previousSong = state
+            ? `${state.source_id || ''}|${state.title || ''}|${state.artist || ''}`
+            : '';
         state = nextState;
+        const nextSong = `${state.source_id || ''}|${state.title || ''}|${state.artist || ''}`;
         document.body.classList.add('music-island-visible');
         root.hidden = false;
         root.classList.toggle('is-playing', Boolean(state.playing));
@@ -241,9 +194,14 @@
         setCover(state.cover_url);
         setPlayerIcon(state.player_icon, state.player_name);
 
-        if (String(state.audio_url || '') !== previousAudioUrl) {
+        if (nextSong !== previousSong || String(state.audio_url || '') !== loadedAudioUrl) {
             loadAudio(state.audio_url);
-            if (joined && state.audio_url) syncJoinedAudio(hostPosition(), true);
+            if (joined && playbackUnlocked && state.audio_url) {
+                elements.audio.play().catch(() => {
+                    playBlocked = true;
+                    updateJoinButton('浏览器阻止自动播放新歌，请重新点击“一起听”');
+                });
+            }
         }
 
         lyricIndex = -1;
@@ -256,18 +214,13 @@
         elements.ambient.removeAttribute('src');
     });
 
-    elements.join.addEventListener('click', async (event) => {
+    elements.join.addEventListener('click', (event) => {
         event.stopPropagation();
         if (joined) {
             leaveTogether();
             return;
         }
-        await refreshMusicState();
         if (!state?.audio_url) return;
-        if (!state.playing) {
-            updateJoinButton('机主已暂停，继续播放后再点“一起听”');
-            return;
-        }
 
         joined = true;
         playBlocked = false;
@@ -275,13 +228,6 @@
         elements.audio.preservesPitch = true;
         root.classList.add('is-listening');
         updateJoinButton();
-        const target = hostPosition();
-        try {
-            elements.audio.currentTime = target;
-        } catch (_) {
-            // Metadata may still be loading; loadedmetadata will correct the position.
-        }
-
         // Keep play() in the direct click call stack so browser autoplay policy
         // recognizes this as an explicit visitor action.
         const playAttempt = elements.audio.play();
@@ -289,7 +235,6 @@
             playbackUnlocked = true;
             playBlocked = false;
             updateJoinButton();
-            syncJoinedAudio(hostPosition());
         }).catch((error) => {
             console.warn('[MusicIsland] 浏览器暂未允许播放音频', error);
             joined = false;
@@ -300,10 +245,6 @@
         });
     });
 
-    elements.audio.addEventListener('loadedmetadata', () => {
-        if (joined) syncJoinedAudio(hostPosition(), true);
-    });
-
     elements.audio.addEventListener('error', () => {
         elements.audio.pause();
         elements.audio.playbackRate = 1;
@@ -311,21 +252,11 @@
     });
 
     elements.audio.addEventListener('waiting', () => {
-        if (joined) updateJoinButton('网络缓冲中，恢复后将平滑追上');
+        if (joined) updateJoinButton('网络缓冲中');
     });
 
     elements.audio.addEventListener('playing', () => {
         if (joined) updateJoinButton();
-    });
-
-    elements.audio.addEventListener('ended', () => {
-        if (!joined || !state?.playing || !state.audio_url) return;
-        elements.audio.currentTime = hostPosition();
-        elements.audio.play().catch((error) => {
-            playBlocked = true;
-            console.warn('[MusicIsland] 循环续播失败', error);
-            updateJoinButton('浏览器阻止循环续播，请重新点击“一起听”');
-        });
     });
 
     window.addEventListener('alive:update', (event) => {
@@ -340,9 +271,8 @@
     }
 
     refreshMusicState();
-    // SSE normally carries music updates; polling keeps playback position in sync
-    // when a proxy buffers or omits an update event.
-    window.setInterval(refreshMusicState, 2000);
+    // SSE handles normal changes; this is only a fallback for buffered proxies.
+    window.setInterval(refreshMusicState, 5000);
 
     window.setInterval(updateProgress, 250);
 })();

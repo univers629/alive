@@ -843,18 +843,6 @@ class Data:
             if state is None:
                 state = _MusicStateData(id=0)
                 session.add(state)
-            elif (
-                state.title == payload.get("title", "")
-                and state.artist == payload.get("artist", "")
-                and state.playing
-                and bool(payload.get("playing"))
-                and duration > 0
-                and (position <= 0.5 or position >= duration - 0.5)
-            ):
-                # Windows media sessions sometimes report a permanent endpoint
-                # instead of the actual position. Keep the server clock moving;
-                # all non-endpoint seeks remain direct owner updates.
-                position = (state.position + max(0, now - state.updated_at)) % duration
             meta = session.get(_MusicPlayerMetaData, 0)
             if meta is None:
                 meta = _MusicPlayerMetaData(id=0)

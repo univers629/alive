@@ -553,41 +553,7 @@ class Reporter:
         self.uploaded_covers: dict[str, str] = {}
         self.last_signature = ""
         self.last_sent_at = 0.0
-        self.last_sent_position = -1.0
         self.was_active = False
-        self.netease_position_id = ""
-        self.netease_position = 0.0
-        self.netease_position_clock = monotonic()
-        self.netease_was_playing = False
-
-    def continuous_netease_position(self, playing: NowPlaying, song_id: str) -> NowPlaying:
-        now = monotonic()
-        if song_id != self.netease_position_id:
-            self.netease_position_id = song_id
-            self.netease_position = playing.position
-            self.netease_position_clock = now
-        predicted = self.netease_position
-        if self.netease_was_playing:
-            predicted += max(0, now - self.netease_position_clock)
-        if playing.position > 0.5:
-            predicted = playing.position
-            self.netease_position = playing.position
-            self.netease_position_clock = now
-        elif not playing.playing:
-            self.netease_position = predicted
-            self.netease_position_clock = now
-        self.netease_was_playing = playing.playing
-        if playing.duration > 0 and playing.playing:
-            predicted %= playing.duration
-        return NowPlaying(
-            source_id=playing.source_id,
-            title=playing.title,
-            artist=playing.artist,
-            album=playing.album,
-            duration=playing.duration,
-            position=max(0, predicted),
-            playing=playing.playing,
-        )
 
     def track_digest(self, path: Path) -> str:
         stat = path.stat()
@@ -680,7 +646,7 @@ class Reporter:
             "player_icon": player_icon,
             "library_path": library_path,
             "duration": (track.duration if track else 0) or playing.duration,
-            "position": playing.position,
+            "position": 0,
             "playing": playing.playing,
             "lyrics": [],
         }
@@ -711,7 +677,7 @@ class Reporter:
             "player_icon": "cloudmusic",
             "library_path": "",
             "duration": playing.duration or track.duration,
-            "position": playing.position,
+            "position": 0,
             "playing": playing.playing,
             "lyrics": [],
         }
@@ -770,34 +736,6 @@ async def run(args: argparse.Namespace) -> None:
             else:
                 is_netease = "cloudmusic" in playing.source_id.casefold()
                 netease_track = netease.lookup(playing) if is_netease else None
-                if is_netease and netease_track and playing.position <= 0.5:
-                    elog_playing = netease.now_playing()
-                    if (
-                        elog_playing
-                        and normalized(elog_playing.title) == normalized(playing.title)
-                        and elog_playing.position > playing.position
-                    ):
-                        playing = NowPlaying(
-                            source_id=playing.source_id,
-                            title=playing.title,
-                            artist=playing.artist,
-                            album=playing.album,
-                            duration=playing.duration or elog_playing.duration,
-                            position=elog_playing.position,
-                            playing=playing.playing,
-                        )
-                if is_netease and netease_track:
-                    elog_playing = netease.now_playing()
-                    if elog_playing and normalized(elog_playing.title) == normalized(playing.title):
-                        playing = NowPlaying(
-                            source_id=playing.source_id,
-                            title=playing.title,
-                            artist=playing.artist,
-                            album=playing.album,
-                            duration=playing.duration or elog_playing.duration,
-                            position=elog_playing.position,
-                            playing=playing.playing,
-                        )
                 local_track = None if is_netease else library.match(
                     playing.title, playing.artist
                 )
@@ -819,10 +757,6 @@ async def run(args: argparse.Namespace) -> None:
                 should_send = (
                     args.once
                     or signature != reporter.last_signature
-                    or (
-                        reporter.last_sent_position >= 0
-                        and abs(playing.position - reporter.last_sent_position) >= 5
-                    )
                     or now - reporter.last_sent_at >= 10
                 )
                 if should_send:
@@ -834,7 +768,6 @@ async def run(args: argparse.Namespace) -> None:
                             log("尚未取得网易云歌曲 ID，本次仅显示媒体会话信息。")
                     reporter.last_signature = signature
                     reporter.last_sent_at = now
-                    reporter.last_sent_position = playing.position
                 if args.once:
                     return
         except requests.RequestException as error:
