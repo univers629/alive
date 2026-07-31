@@ -539,7 +539,7 @@ class Data:
             return setting.value if setting else default
 
     def set_runtime_setting(self, key: str, value: str) -> None:
-        if key not in {"danmaku_enabled", "page_name", "music_library"}:
+        if key not in {"danmaku_enabled", "page_name", "page_title", "music_library"}:
             raise u.APIUnsuccessful(400, "unsupported runtime setting")
         with self._write_lock, self.session() as session:
             setting = session.get(_RuntimeSettingData, key)
@@ -556,6 +556,10 @@ class Data:
     @property
     def page_name(self) -> str:
         return self.runtime_setting("page_name", self._c.page.name)
+
+    @property
+    def page_title(self) -> str:
+        return self.runtime_setting("page_title", self._c.page.title)
 
     @property
     def music_library(self) -> str:

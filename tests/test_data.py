@@ -29,6 +29,7 @@ def test_runtime_site_settings_survive_database_reopen(tmp_path):
     first = Data(config, start_scheduler=False)
     first.set_runtime_setting("danmaku_enabled", "false")
     first.set_runtime_setting("page_name", "RealDeviceOwner")
+    first.set_runtime_setting("page_title", "Real Device Status")
     first.set_runtime_setting("music_library", str(tmp_path / "music"))
     first.close()
 
@@ -36,6 +37,7 @@ def test_runtime_site_settings_survive_database_reopen(tmp_path):
     try:
         assert reopened.danmaku_enabled is False
         assert reopened.page_name == "RealDeviceOwner"
+        assert reopened.page_title == "Real Device Status"
         assert reopened.music_library == str(tmp_path / "music")
     finally:
         reopened.close()

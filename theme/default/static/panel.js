@@ -7,6 +7,7 @@ let displaySettings = {
     visit_display_mode: 'total',
     danmaku_enabled: true,
     page_name: 'Alive',
+    page_title: 'Alive',
     music_library: '/alive/music-library'
 };
 
@@ -48,6 +49,8 @@ async function initPage() {
         }
         const pageName = document.getElementById('page-name');
         if (pageName) pageName.value = displaySettings.page_name || 'Alive';
+        const pageTitle = document.getElementById('page-title');
+        if (pageTitle) pageTitle.value = displaySettings.page_title || 'Alive';
         const danmakuEnabled = document.getElementById('danmaku-enabled');
         if (danmakuEnabled) danmakuEnabled.checked = displaySettings.danmaku_enabled !== false;
         const musicLibrary = document.getElementById('music-library');
@@ -249,6 +252,7 @@ async function saveDisplaySettings() {
             visit_display_mode: select.value,
             danmaku_enabled: document.getElementById('danmaku-enabled').checked,
             page_name: document.getElementById('page-name').value.trim(),
+            page_title: document.getElementById('page-title').value.trim(),
             music_library: document.getElementById('music-library').value.trim()
         });
         const data = await response.json();
@@ -260,6 +264,37 @@ async function saveDisplaySettings() {
     } catch (error) {
         console.error('保存展示设置失败:', error);
         alert(`保存展示设置失败：${error.message || error}`);
+    }
+}
+
+async function uploadFavicon() {
+    const input = document.getElementById('favicon-file');
+    const status = document.getElementById('favicon-upload-status');
+    const preview = document.getElementById('favicon-preview');
+    const file = input?.files?.[0];
+    if (!file) {
+        status.textContent = '请选择 PNG、JPEG 或 WebP 图片。';
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        status.textContent = '图片不能超过 5 MiB。';
+        return;
+    }
+    status.textContent = '上传中...';
+    try {
+        const response = await fetch('/api/admin/favicon', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': file.type },
+            body: file
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || '上传失败');
+        preview.src = data.favicon;
+        status.textContent = '网站图标已更新。';
+        input.value = '';
+    } catch (error) {
+        status.textContent = `上传失败：${error.message || error}`;
     }
 }
 
@@ -497,6 +532,19 @@ document.addEventListener('DOMContentLoaded', function () {
     if (saveSecretBtn) {
         saveSecretBtn.addEventListener('click', saveSecret);
     }
+    const faviconFile = document.getElementById('favicon-file');
+    if (faviconFile) {
+        faviconFile.addEventListener('change', () => {
+            const file = faviconFile.files?.[0];
+            if (!file) return;
+            const preview = document.getElementById('favicon-preview');
+            const objectUrl = URL.createObjectURL(file);
+            preview.onload = () => URL.revokeObjectURL(objectUrl);
+            preview.src = objectUrl;
+        });
+    }
+    const uploadFaviconBtn = document.getElementById('upload-favicon-btn');
+    if (uploadFaviconBtn) uploadFaviconBtn.addEventListener('click', uploadFavicon);
 
     // 设备删除按钮
     document.addEventListener('click', function (event) {

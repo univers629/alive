@@ -16,9 +16,9 @@
                 document.documentElement.style.colorScheme = mode;
             })();
         </script>
-        <title>{{ page_name }} - 管理面板</title>
+        <title>{{ page_title }} - 管理面板</title>
         <meta name="description" content="管理面板" />
-        <link rel="icon" href="{{ c.page.favicon }}" />
+        <link rel="icon" href="{{ page_favicon }}" />
         <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}" />
         <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}" />
         <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}" />
@@ -63,6 +63,10 @@
                             <input id="page-name" class="panel-input panel-input-wide" maxlength="64"
                                 autocomplete="off" placeholder="例如：Alive">
                         </label>
+                        <label>浏览器页面标题
+                            <input id="page-title" class="panel-input panel-input-wide" maxlength="120"
+                                autocomplete="off" placeholder="例如：Alive Status">
+                        </label>
                         <label>访问次数
                         <select id="visit-display-mode" class="panel-input">
                             <option value="total">累计访问</option>
@@ -82,6 +86,18 @@
                     <p class="panel-help">Docker 下这里填写容器内路径；宿主机路径请在 `.env` 的
                         `ALIVE_MUSIC_LIBRARY_HOST` 中配置，修改挂载后需要重启容器。</p>
                     <button class="btn btn-primary" id="save-display-settings-btn">保存主页设置</button>
+                    <div class="favicon-upload">
+                        <div class="favicon-preview-wrap">
+                            <img id="favicon-preview" class="favicon-preview" src="{{ page_favicon }}" alt="当前网站图标">
+                        </div>
+                        <div class="favicon-upload-controls">
+                            <label>网站图标
+                                <input id="favicon-file" class="panel-input" type="file" accept="image/png,image/jpeg,image/webp">
+                            </label>
+                            <button class="btn btn-secondary" id="upload-favicon-btn" type="button">上传图标</button>
+                            <span class="panel-help" id="favicon-upload-status" role="status"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 

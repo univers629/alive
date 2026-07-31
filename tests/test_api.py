@@ -1,4 +1,5 @@
 import asyncio
+import io
 import hashlib
 import json
 import os
@@ -10,6 +11,7 @@ os.environ["alive_main_colorful_log"] = "false"
 os.environ["alive_page_more_text"] = "累计访问 {visit_total} 次"
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
 import main
 from music_sources import NeteaseResolution
@@ -575,6 +577,7 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
                 "visit_display_mode": "monthly",
                 "danmaku_enabled": False,
                 "page_name": "Codex",
+                "page_title": "Codex Status",
                 "music_library": str(tmp_path / "music"),
             },
         )
@@ -582,9 +585,15 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert settings.json()["visit_metric"]["mode"] == "monthly"
         assert settings.json()["settings"]["danmaku_enabled"] is False
         assert settings.json()["settings"]["page_name"] == "Codex"
+        assert settings.json()["settings"]["page_title"] == "Codex Status"
         assert settings.json()["settings"]["music_library"] == str((tmp_path / "music").resolve())
         assert client.get("/api/status/query").json()["visit_metric"]["mode"] == "monthly"
         assert "Codex's" in client.get("/").text
+        assert "<title>Codex Status</title>" in client.get("/").text
+        assert "<title>Codex Status · 详情</title>" in client.get("/details").text
+        client.post("/panel/logout")
+        assert "<title>Codex Status - 登录</title>" in client.get("/panel/login").text
+        client.post("/panel/auth", json={"secret": "test-secret-1234"})
         assert client.get("/api/comments/query").json()["danmaku_enabled"] is False
 
         profile = client.post(
@@ -663,6 +672,7 @@ def test_admin_uses_signed_session_and_post_actions():
         assert token
         assert "test-secret-1234" not in token
 
+
         panel = client.get("/panel")
         assert panel.status_code == 200
         assert "color-mode.css" in panel.text
@@ -703,6 +713,58 @@ def test_secret_in_query_string_is_not_accepted():
             json={},
         )
         assert response.status_code == 401
+
+
+def test_admin_favicon_upload_validates_and_writes_64px_ico(tmp_path, monkeypatch):
+    favicon_path = tmp_path / "public" / "favicon.ico"
+    monkeypatch.setattr(main, "FAVICON_PATH", favicon_path)
+    headers = {"Authorization": "Bearer test-secret-1234"}
+
+    def image_bytes(fmt, size):
+        mode = "RGB" if fmt == "JPEG" else "RGBA"
+        image = Image.new(mode, size, (24, 120, 220, 255))
+        stream = io.BytesIO()
+        image.save(stream, format=fmt)
+        return stream.getvalue()
+
+    with TestClient(main.app) as client:
+        valid = client.post(
+            "/api/admin/favicon",
+            headers=headers,
+            content=image_bytes("PNG", (96, 96)),
+        )
+        assert valid.status_code == 200
+        assert valid.json()["favicon"].startswith("/favicon.ico?v=")
+        assert favicon_path.is_file()
+        with Image.open(favicon_path) as output:
+            assert output.format == "ICO"
+            assert output.size == (64, 64)
+            assert output.mode == "RGBA"
+        served = client.get("/favicon.ico")
+        assert served.status_code == 200
+        assert served.content == favicon_path.read_bytes()
+
+        nonsquare = client.post(
+            "/api/admin/favicon",
+            headers=headers,
+            content=image_bytes("JPEG", (64, 32)),
+        )
+        assert nonsquare.status_code == 400
+        assert "square" in nonsquare.json()["message"]
+
+        svg = client.post(
+            "/api/admin/favicon",
+            headers=headers,
+            content=b"<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+        )
+        assert svg.status_code == 415
+
+        oversize = client.post(
+            "/api/admin/favicon",
+            headers=headers,
+            content=b"x" * (5 * 1024 * 1024 + 1),
+        )
+        assert oversize.status_code == 413
 
 
 def test_admin_can_rotate_secret_without_echoing_it(tmp_path):

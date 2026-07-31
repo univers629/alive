@@ -7,8 +7,10 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import hmac
+import io
 import json
 import logging
+import os
 import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -31,6 +33,7 @@ from fastapi.responses import (
     StreamingResponse,
 )
 from jinja2 import Environment, select_autoescape
+from PIL import Image, UnidentifiedImageError
 from toml import load as load_toml
 
 from config import Config as config_init
@@ -105,6 +108,8 @@ l.info("Alive version %s, powered by FastAPI", version_str)
 d = Data(config=c)
 netease_resolver = NeteaseResolver()
 tz = pytz.timezone(c.main.timezone)
+FAVICON_PATH = Path(u.get_path("data/public/favicon.ico"))
+MAX_FAVICON_BYTES = 5 * 1024 * 1024
 
 
 _active_viewers = 0
@@ -320,9 +325,9 @@ def index(request: Request):
     content = render_template(
         request,
         "index.html",
-        page_title=c.page.title,
+        page_title=d.page_title,
         page_desc=c.page.desc,
-        page_favicon=c.page.favicon,
+        page_favicon=favicon_url(),
         page_background=c.page.background,
         cards={"main": main_card or ""},
         music_island=music_island or "",
@@ -344,9 +349,9 @@ def details_page(request: Request):
     content = render_template(
         request,
         "details.html",
-        page_title=f"{c.page.name} · 详情",
-        page_desc=f"{c.page.name} 的设备、访问和互动详情",
-        page_favicon=c.page.favicon,
+        page_title=f"{d.page_title} · 详情",
+        page_desc=f"{d.page_title} 的设备、访问和互动详情",
+        page_favicon=favicon_url(),
         page_background=c.page.background,
         site_chrome=site_chrome or "",
         site_footer=site_footer or "",
@@ -406,9 +411,20 @@ def _safe_file(root: Path, relative: str) -> Path | None:
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
+    if FAVICON_PATH.is_file():
+        return FileResponse(FAVICON_PATH, media_type="image/x-icon")
     if c.page.favicon != "/favicon.ico":
         return RedirectResponse(c.page.favicon, status_code=302)
     return _serve_public("favicon.ico")
+
+
+def favicon_url() -> str:
+    if FAVICON_PATH.is_file():
+        try:
+            return f"/favicon.ico?v={FAVICON_PATH.stat().st_mtime_ns}"
+        except OSError:
+            pass
+    return c.page.favicon
 
 
 @app.get("/docs", response_class=HTMLResponse, include_in_schema=False)
@@ -436,10 +452,10 @@ def metadata_response() -> dict:
         "version_str": version_str,
         "timezone": c.main.timezone,
         "page": {
-            "name": c.page.name,
-            "title": c.page.title,
+            "name": d.page_name,
+            "title": d.page_title,
             "desc": c.page.desc,
-            "favicon": c.page.favicon,
+            "favicon": favicon_url(),
             "background": c.page.background,
             "theme": "default",
         },
@@ -1096,6 +1112,8 @@ def admin_snapshot():
             "visit_display_mode": d.visit_display_mode,
             "danmaku_enabled": d.danmaku_enabled,
             "page_name": d.page_name,
+            "page_title": d.page_title,
+            "favicon": favicon_url(),
             "music_library": d.music_library,
         },
         "metrics": d.metrics_resp,
@@ -1124,6 +1142,13 @@ async def admin_settings(request: Request):
         if not page_name:
             raise u.APIUnsuccessful(400, "page_name cannot be empty")
         d.set_runtime_setting("page_name", page_name)
+    if "page_title" in body:
+        page_title = _single_line_text(str(body["page_title"]))
+        if not page_title:
+            raise u.APIUnsuccessful(400, "page_title cannot be empty")
+        if len(page_title) > 120:
+            raise u.APIUnsuccessful(400, "page_title must be 120 characters or fewer")
+        d.set_runtime_setting("page_title", page_title)
     if "music_library" in body:
         raw_path = str(body["music_library"]).strip()
         if not raw_path or len(raw_path) > 4096:
@@ -1141,10 +1166,48 @@ async def admin_settings(request: Request):
             "visit_display_mode": d.visit_display_mode,
             "danmaku_enabled": d.danmaku_enabled,
             "page_name": d.page_name,
+            "page_title": d.page_title,
+            "favicon": favicon_url(),
             "music_library": d.music_library,
         },
         "visit_metric": d.public_visit_metric,
     }
+
+
+@app.post(
+    "/api/admin/favicon",
+    dependencies=[Depends(require_secret)],
+    tags=["后台管理 / Admin"],
+    summary="上传后台 favicon",
+)
+async def admin_favicon(request: Request):
+    body = await request.body()
+    if not body:
+        raise u.APIUnsuccessful(400, "favicon body is required")
+    if len(body) > MAX_FAVICON_BYTES:
+        raise u.APIUnsuccessful(413, "favicon must be 5 MiB or smaller")
+    try:
+        with Image.open(io.BytesIO(body)) as source:
+            if source.format not in {"PNG", "JPEG", "WEBP"}:
+                raise u.APIUnsuccessful(415, "favicon must be PNG, JPEG, or WebP")
+            width, height = source.size
+            if width != height:
+                raise u.APIUnsuccessful(400, "favicon source image must be square")
+            if not 16 <= width <= 4096:
+                raise u.APIUnsuccessful(400, "favicon dimensions must be between 16 and 4096 pixels")
+            converted = source.convert("RGBA").resize((64, 64), Image.Resampling.LANCZOS)
+            FAVICON_PATH.parent.mkdir(parents=True, exist_ok=True)
+            temporary = FAVICON_PATH.with_name(f".{FAVICON_PATH.name}.{secrets.token_hex(8)}.tmp")
+            try:
+                converted.save(temporary, format="ICO", sizes=[(64, 64)])
+                os.replace(temporary, FAVICON_PATH)
+            finally:
+                temporary.unlink(missing_ok=True)
+    except u.APIUnsuccessful:
+        raise
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise u.APIUnsuccessful(415, "favicon must be a valid PNG, JPEG, or WebP image")
+    return {"success": True, "favicon": favicon_url()}
 
 
 @app.post(
@@ -1245,6 +1308,8 @@ async def admin_panel(request: Request):
         "panel.html",
         c=c,
         page_name=d.page_name,
+        page_title=d.page_title,
+        page_favicon=favicon_url(),
         inject="",
     )
     if content is None:
@@ -1260,6 +1325,8 @@ def login(request: Request):
         request,
         "login.html",
         c=c,
+        page_title=d.page_title,
+        page_favicon=favicon_url(),
     )
     if content is None:
         raise HTTPException(status_code=404)
@@ -1325,6 +1392,7 @@ POST_ONLY_PATHS = {
     "/api/music/track/upload",
     "/api/comments/create",
     "/api/admin/settings",
+    "/api/admin/favicon",
     "/api/admin/secret",
     "/api/admin/device/profile",
     "/api/admin/comments/remove",

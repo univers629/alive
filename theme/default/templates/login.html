@@ -16,9 +16,9 @@
                 document.documentElement.style.colorScheme = mode;
             })();
         </script>
-        <title>{{ c.page.name }} - 登录</title>
+        <title>{{ page_title }} - 登录</title>
         <meta name="description" content="登录到管理面板" />
-        <link rel="icon" href="{{ c.page.favicon }}" />
+        <link rel="icon" href="{{ page_favicon }}" />
         <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}" />
         <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}" />
         <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}" />

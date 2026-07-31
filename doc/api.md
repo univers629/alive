@@ -48,6 +48,7 @@ Cookie 不包含原始密钥，并使用 `SameSite=Strict`；HTTPS 下还会设�
 | POST | `/api/music/track/upload` | 是 | 流式上传当前播放的音频 |
 | GET | `/api/admin/snapshot` | 会话/密钥 | 后台设备和展示设置 |
 | POST | `/api/admin/settings` | 会话/密钥 | 修改主页、弹幕和音乐目录 |
+| POST | `/api/admin/favicon` | 会话/密钥 | 上传 PNG、JPEG 或 WebP 网站图标 |
 | POST | `/api/admin/secret` | 会话/密钥 | 轮换全局密钥 |
 | POST | `/api/admin/device/profile` | 会话/密钥 | 修改设备显示资料 |
 | GET | `/panel` | 会话 | 管理后台页面 |
@@ -228,13 +229,21 @@ X-Alive-Audio-Suffix: .flac
   "visit_display_mode": "monthly",
   "danmaku_enabled": true,
   "page_name": "YourName",
+  "page_title": "Your Status",
   "music_library": "/alive/music-library"
 }
 ```
 
 允许值为 `total`、`daily`、`monthly`，分别表示累计、今日和本月。它只控制首页
 展示，不会覆盖对应统计值。弹幕总开关、`Alive's Status:` 用户名和容器内音乐目录
-同样持久化到 SQLite。
+同样持久化到 SQLite。`page_title` 必须为单行、非空且不超过 120 个字符；响应和后台
+快照会返回当前带缓存版本的 `favicon` URL。
+
+### POST `/api/admin/favicon`
+
+请求体为原始 PNG、JPEG 或 WebP 图片，不使用 multipart。图片必须为 16 到 4096
+像素范围内的正方形，且不超过 5 MiB。服务端会去除元数据、转换为 RGBA、缩放为
+64x64，并原子写入持久化的 `data/public/favicon.ico`。
 
 ### POST `/api/admin/secret`
 

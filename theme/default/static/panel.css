@@ -145,6 +145,47 @@ body.admin-panel {
   grid-column: 1 / -1;
 }
 
+.favicon-upload {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--alive-border-soft);
+}
+
+.favicon-preview-wrap {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  flex: none;
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 11px;
+  background: var(--alive-input);
+}
+
+.favicon-preview {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.favicon-upload-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.favicon-upload-controls label {
+  min-width: min(100%, 280px);
+}
+
+.favicon-upload-controls .panel-help {
+  margin: 0;
+}
+
 .panel-device-actions {
   justify-content: space-between;
   margin-bottom: 15px;
@@ -230,6 +271,13 @@ body.admin-panel {
 
 input[type="checkbox"] {
   accent-color: var(--alive-accent);
+}
+
+@media (max-width: 560px) {
+  .favicon-upload {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 .status-selector {
