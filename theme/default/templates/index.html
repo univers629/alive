@@ -20,10 +20,21 @@
     <title>{{ page_title }}</title>
     <meta name="description" content="{{ page_desc }}">
     <link rel="icon" href="{{ page_favicon }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}?v=20260730-2">
-    <link rel="stylesheet" href="{{ url_for('static', filename='page-shell.css') }}?v=20260730-2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='page-shell.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}?v=20260801-1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='site-chrome.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='device-cards.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{{ url_for('static', filename='comment-wall.css') }}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{{ url_for('static', filename='site-footer.css') }}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{{ url_for('static', filename='music-island.css') }}" media="print" onload="this.media='all'">
+    <noscript>
+        <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='comment-wall.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='site-footer.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='music-island.css') }}">
+    </noscript>
     <style>
         body {
             background: url('{{ page_background }}') no-repeat center center fixed;
@@ -38,21 +49,21 @@
 
 <body>
     {{ site_chrome | safe }}
-    <div class="container">
+    <main class="container" id="main-content">
         {% for card_name, card_value in cards.items() %}
         <div class="card" id="{{ card_name }}">
             {{ card_value | safe }}
         </div>
         {% endfor %}
-    </div>
+    </main>
     {{ comment_wall | safe }}
     {{ site_footer | safe }}
     {{ music_island | safe }}
 </body>
 
-<script type="module" src="{{ url_for('static', filename='get.js') }}?v=20260801-2" defer></script>
+<script type="module" src="{{ url_for('static', filename='get.js') }}" defer></script>
 <script src="{{ url_for('static', filename='color-mode.js') }}" defer></script>
-<script src="{{ url_for('static', filename='glass-select.js') }}?v=20260801-1" defer></script>
+<script src="{{ url_for('static', filename='glass-select.js') }}" defer></script>
 <script src="{{ url_for('static', filename='site-chrome.js') }}" defer></script>
 
 {{ inject | safe }}

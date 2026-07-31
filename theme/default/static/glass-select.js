@@ -11,12 +11,10 @@
   function enhance(select) {
     if (!(select instanceof HTMLSelectElement) || select.multiple || controllers.has(select)) return;
 
-    const measuredWidth = Math.ceil(select.getBoundingClientRect().width);
     const wrapper = document.createElement('span');
     wrapper.className = 'glass-select';
     const originalWidth = select.style.width;
     if (originalWidth) wrapper.style.width = originalWidth;
-    else if (measuredWidth > 1) wrapper.style.width = `${measuredWidth}px`;
 
     const trigger = document.createElement('button');
     trigger.className = 'glass-select__trigger';

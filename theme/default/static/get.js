@@ -159,6 +159,8 @@ function updateDeviceCard(card, device, index, timeout, now, deviceIcons) {
             const image = document.createElement('img');
             image.src = appIconUrl;
             image.alt = '';
+            image.width = 28;
+            image.height = 28;
             image.loading = 'lazy';
             appIcon.replaceChildren(image);
         }

@@ -1,4 +1,3 @@
-<link rel="stylesheet" href="{{ url_for('static', filename='device-cards.css') }}?v=20260801-1">
 <button id="slider" hidden aria-hidden="true">
     <!--
                 (左) 透明度滑块
@@ -37,7 +36,7 @@
 </div>
 
 <h1><ruby>似<rt>sǐ</rt></ruby>了吗?</h1>
-<h3><i><b>{{ username }}'s</b></i> Status:<br><a id="status">{{ status.name }}</a></h3>
+<h2 class="main-status-heading"><i><b>{{ username }}'s</b></i> Status:<br><a id="status">{{ status.name }}</a></h2>
 <p id="additional-info">{{ status.desc | safe }}</p>
 <section class="device-overview" aria-labelledby="device-overview-title">
     <div class="device-overview__header">

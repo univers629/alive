@@ -158,6 +158,11 @@ div p {
   margin: 1rem;
 }
 
+.main-status-heading {
+  margin: 1em 0;
+  font-size: 1.17em;
+}
+
 .visit-metric {
   width: fit-content;
   display: inline-flex;

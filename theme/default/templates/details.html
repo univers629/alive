@@ -20,11 +20,18 @@
     <title>{{ page_title }}</title>
     <meta name="description" content="{{ page_desc }}">
     <link rel="icon" href="{{ page_favicon }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}?v=20260730-2">
-    <link rel="stylesheet" href="{{ url_for('static', filename='page-shell.css') }}?v=20260730-2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='page-shell.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}?v=20260801-1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='details.css') }}?v=20260801-1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='site-chrome.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='details.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='site-footer.css') }}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{{ url_for('static', filename='music-island.css') }}" media="print" onload="this.media='all'">
+    <noscript>
+        <link rel="stylesheet" href="{{ url_for('static', filename='site-footer.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='music-island.css') }}">
+    </noscript>
     <style>
         body {
             background: url('{{ page_background }}') no-repeat center center fixed;
@@ -144,9 +151,9 @@
     {{ music_island | safe }}
 
     <script src="{{ url_for('static', filename='color-mode.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='glass-select.js') }}?v=20260801-1" defer></script>
+    <script src="{{ url_for('static', filename='glass-select.js') }}" defer></script>
     <script src="{{ url_for('static', filename='site-chrome.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='details.js') }}?v=20260801-1" defer></script>
+    <script src="{{ url_for('static', filename='details.js') }}" defer></script>
 </body>
 
 </html>

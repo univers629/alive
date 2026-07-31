@@ -377,6 +377,9 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert 'class="music-island__progress" type="range"' not in home.text
         assert 'class="device-grid"' in home.text
         assert "device-cards.css" in home.text
+        assert '<main class="container" id="main-content">' in home.text
+        assert 'id="site-drawer" aria-hidden="true" aria-label="更多页面" inert' in home.text
+        assert "?v=1.0.0?v=" not in home.text
         assert 'class="health-overview__grid"' in home.text
         assert "身体状态" in home.text
         assert "心率" in home.text
@@ -399,6 +402,13 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert "top: 0;" in topbar_css
         assert "width: 100%;" in topbar_css
         assert "border-radius: 0;" in topbar_css
+
+        direct_asset = client.get("/static/main.css", follow_redirects=False)
+        assert direct_asset.status_code == 200
+        assert direct_asset.headers["cache-control"] == "no-cache"
+        versioned_asset = client.get("/static/main.css?v=test", follow_redirects=False)
+        assert versioned_asset.status_code == 200
+        assert versioned_asset.headers["cache-control"] == "public, max-age=31536000, immutable"
 
         mode_css = client.get("/static/color-mode.css").text
         assert 'content: "☀";' in mode_css
@@ -447,6 +457,7 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         select_js = client.get("/static/glass-select.js").text
         assert "new MutationObserver" in select_js
         assert "select.dispatchEvent(new Event('change'" in select_js
+        assert "select.getBoundingClientRect()" not in select_js
 
         panel = client.get(
             "/panel",

@@ -12,6 +12,7 @@
   }
 
   function setOpen(open) {
+    if (open) drawer.inert = false;
     document.body.classList.toggle('site-drawer-open', open);
     toggle.setAttribute('aria-expanded', String(open));
     toggle.setAttribute('aria-label', open ? '关闭更多菜单' : '打开更多菜单');
@@ -22,6 +23,7 @@
     } else if (previousFocus instanceof HTMLElement) {
       previousFocus.focus();
     }
+    if (!open) drawer.inert = true;
   }
 
   toggle.addEventListener('click', () => {

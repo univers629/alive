@@ -106,7 +106,6 @@
   left: 0;
   overflow: hidden;
   pointer-events: none;
-  transition: bottom 420ms cubic-bezier(.22, 1, .36, 1);
 }
 
 .comment-wall__stage[hidden] {

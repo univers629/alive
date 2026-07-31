@@ -159,7 +159,13 @@ templates = Environment(autoescape=select_autoescape(("html", "xml")))
 
 def template_url_for(endpoint: str, **values: str) -> str:
     if endpoint == "static":
-        return f"/static/{values.get('filename', '')}?v={version_str}"
+        filename = values.get("filename", "")
+        file = _safe_file(
+            Path(u.get_path("theme/default/static", is_dir=True)),
+            filename,
+        )
+        asset_version = file.stat().st_mtime_ns if file else version_str
+        return f"/static/{filename}?v={asset_version}"
     return f"/{endpoint.lstrip('/')}"
 
 
@@ -364,29 +370,45 @@ def details_page(request: Request):
 
 @app.get("/static/{filename:path}", include_in_schema=False)
 def static_proxy(request: Request, filename: str):
-    query = f"?{request.url.query}" if request.url.query else ""
-    response = RedirectResponse(
-        f"/static-themed/{_theme(request)}/{filename}{query}", status_code=302
+    root = Path(u.get_path("theme", is_dir=True))
+    file = _safe_file(root / _theme(request) / "static", filename)
+    if file is None and _theme(request) != "default":
+        file = _safe_file(root / "default" / "static", filename)
+    if file is None:
+        raise HTTPException(status_code=404, detail=f"Static file {filename} not found")
+    cache_control = (
+        "public, max-age=31536000, immutable"
+        if request.query_params.get("v")
+        else "no-cache"
     )
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    return response
+    return FileResponse(
+        file,
+        media_type=guess_type(filename)[0],
+        headers={"Cache-Control": cache_control},
+    )
 
 
 @app.get("/static-themed/{theme}/{filename:path}", include_in_schema=False)
 def static_themed(request: Request, theme: str, filename: str):
     file = _safe_file(Path(u.get_path("theme", is_dir=True)) / theme / "static", filename)
-    if file:
-        return FileResponse(
-            file,
-            media_type=guess_type(filename)[0],
-            headers={"Cache-Control": "no-cache"},
+    if file is None and theme != "default":
+        file = _safe_file(
+            Path(u.get_path("theme", is_dir=True)) / "default" / "static",
+            filename,
         )
-    if theme != "default":
-        query = f"?{request.url.query}" if request.url.query else ""
-        return RedirectResponse(
-            f"/static-themed/default/{filename}{query}", status_code=302
-        )
-    raise HTTPException(status_code=404, detail=f"Static file {filename} not found")
+    if file is None:
+        raise HTTPException(status_code=404, detail=f"Static file {filename} not found")
+    return FileResponse(
+        file,
+        media_type=guess_type(filename)[0],
+        headers={
+            "Cache-Control": (
+                "public, max-age=31536000, immutable"
+                if request.query_params.get("v")
+                else "no-cache"
+            )
+        },
+    )
 
 
 @app.get("/default/{filename:path}", include_in_schema=False)

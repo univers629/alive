@@ -97,6 +97,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr));
   gap: 14px;
+  min-height: 180px;
 }
 
 .device-grid__empty {

@@ -1,5 +1,3 @@
-<link rel="stylesheet" href="{{ url_for('static', filename='music-island.css') }}?v=20260801-1">
-
 <aside id="music-island" class="music-island" hidden aria-label="机主当前正在听">
     <div
         class="music-island__summary"
@@ -11,7 +9,7 @@
     >
         <div class="music-island__cover-shell" aria-hidden="true">
             <div class="music-island__cover-fallback">♪</div>
-            <img class="music-island__cover" alt="">
+            <img class="music-island__cover" alt="" width="56" height="56">
             <span class="music-island__record-hole"></span>
         </div>
 
@@ -77,4 +75,4 @@
     <audio class="music-island__audio" preload="metadata" loop></audio>
 </aside>
 
-<script src="{{ url_for('static', filename='music-island.js') }}?v=20260801-1" defer></script>
+<script src="{{ url_for('static', filename='music-island.js') }}" defer></script>
