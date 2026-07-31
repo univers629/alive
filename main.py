@@ -662,7 +662,7 @@ async def set_status(request: Request):
 def get_status_list():
     return {
         "success": True,
-        "status_list": [item.model_dump() for item in c.status.status_list],
+        "status_list": [item.model_dump() for item in d.status_list],
     }
 
 
@@ -1115,6 +1115,8 @@ def admin_snapshot():
             "page_title": d.page_title,
             "favicon": favicon_url(),
             "music_library": d.music_library,
+            "online_status_desc": d.online_status_desc,
+            "offline_status_desc": d.offline_status_desc,
         },
         "metrics": d.metrics_resp,
         "comments": d.comment_admin_list(),
@@ -1149,6 +1151,14 @@ async def admin_settings(request: Request):
         if len(page_title) > 120:
             raise u.APIUnsuccessful(400, "page_title must be 120 characters or fewer")
         d.set_runtime_setting("page_title", page_title)
+    for key in ("online_status_desc", "offline_status_desc"):
+        if key in body:
+            description = _single_line_text(str(body[key]))
+            if not description:
+                raise u.APIUnsuccessful(400, f"{key} cannot be empty")
+            if len(description) > 300:
+                raise u.APIUnsuccessful(400, f"{key} must be 300 characters or fewer")
+            d.set_runtime_setting(key, description)
     if "music_library" in body:
         raw_path = str(body["music_library"]).strip()
         if not raw_path or len(raw_path) > 4096:
@@ -1169,6 +1179,8 @@ async def admin_settings(request: Request):
             "page_title": d.page_title,
             "favicon": favicon_url(),
             "music_library": d.music_library,
+            "online_status_desc": d.online_status_desc,
+            "offline_status_desc": d.offline_status_desc,
         },
         "visit_metric": d.public_visit_metric,
     }

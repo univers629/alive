@@ -635,6 +635,8 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
                 "danmaku_enabled": False,
                 "page_name": "Codex",
                 "page_title": "Codex Status",
+                "online_status_desc": "现在可以联系我。",
+                "offline_status_desc": "现在暂时无法联系。",
                 "music_library": str(tmp_path / "music"),
             },
         )
@@ -643,6 +645,8 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert settings.json()["settings"]["danmaku_enabled"] is False
         assert settings.json()["settings"]["page_name"] == "Codex"
         assert settings.json()["settings"]["page_title"] == "Codex Status"
+        assert settings.json()["settings"]["online_status_desc"] == "现在可以联系我。"
+        assert settings.json()["settings"]["offline_status_desc"] == "现在暂时无法联系。"
         assert settings.json()["settings"]["music_library"] == str((tmp_path / "music").resolve())
         assert client.get("/api/status/query").json()["visit_metric"]["mode"] == "monthly"
         assert "Codex's" in client.get("/").text
@@ -652,6 +656,9 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert "<title>Codex Status - 登录</title>" in client.get("/panel/login").text
         client.post("/panel/auth", json={"secret": "test-secret-1234"})
         assert client.get("/api/comments/query").json()["danmaku_enabled"] is False
+        status_list = client.get("/api/status/list").json()["status_list"]
+        assert status_list[0]["desc"] == "现在可以联系我。"
+        assert status_list[1]["desc"] == "现在暂时无法联系。"
 
         profile = client.post(
             "/api/admin/device/profile",

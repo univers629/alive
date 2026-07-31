@@ -289,7 +289,12 @@ class Data:
 
     def get_status(self, status_id: int) -> tuple[bool, _StatusItemModel]:
         try:
-            return True, self._c.status.status_list[status_id]
+            status = self._c.status.status_list[status_id]
+            if status_id == 0:
+                status = status.model_copy(update={"desc": self.online_status_desc})
+            elif status_id == 1:
+                status = status.model_copy(update={"desc": self.offline_status_desc})
+            return True, status
         except IndexError:
             return False, _StatusItemModel(
                 id=status_id,
@@ -589,7 +594,14 @@ class Data:
             return setting.value if setting else default
 
     def set_runtime_setting(self, key: str, value: str) -> None:
-        if key not in {"danmaku_enabled", "page_name", "page_title", "music_library"}:
+        if key not in {
+            "danmaku_enabled",
+            "page_name",
+            "page_title",
+            "music_library",
+            "online_status_desc",
+            "offline_status_desc",
+        }:
             raise u.APIUnsuccessful(400, "unsupported runtime setting")
         with self._write_lock, self.session() as session:
             setting = session.get(_RuntimeSettingData, key)
@@ -614,6 +626,18 @@ class Data:
     @property
     def music_library(self) -> str:
         return self.runtime_setting("music_library", self._c.main.music_library)
+
+    @property
+    def online_status_desc(self) -> str:
+        return self.runtime_setting("online_status_desc", self._c.status.status_list[0].desc)
+
+    @property
+    def offline_status_desc(self) -> str:
+        return self.runtime_setting("offline_status_desc", self._c.status.status_list[1].desc)
+
+    @property
+    def status_list(self) -> list[_StatusItemModel]:
+        return [self.get_status(index)[1] for index in range(len(self._c.status.status_list))]
 
     @property
     def public_visit_metric(self) -> dict[str, Any]:

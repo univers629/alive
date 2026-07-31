@@ -9,7 +9,9 @@ let displaySettings = {
     danmaku_enabled: true,
     page_name: 'Alive',
     page_title: 'Alive',
-    music_library: '/alive/music-library'
+    music_library: '/alive/music-library',
+    online_status_desc: '',
+    offline_status_desc: ''
 };
 
 async function postJSON(url, body = {}) {
@@ -58,6 +60,14 @@ async function initPage() {
         if (danmakuEnabled) danmakuEnabled.checked = displaySettings.danmaku_enabled !== false;
         const musicLibrary = document.getElementById('music-library');
         if (musicLibrary) musicLibrary.value = displaySettings.music_library || '/alive/music-library';
+        const onlineStatusDesc = document.getElementById('online-status-desc');
+        if (onlineStatusDesc) onlineStatusDesc.value = displaySettings.online_status_desc || statusList[0]?.desc || '';
+        const offlineStatusDesc = document.getElementById('offline-status-desc');
+        if (offlineStatusDesc) offlineStatusDesc.value = displaySettings.offline_status_desc || statusList[1]?.desc || '';
+        const onlineStatusLabel = document.getElementById('online-status-label');
+        if (onlineStatusLabel) onlineStatusLabel.textContent = `${statusList[0]?.name || '在线'}状态文案`;
+        const offlineStatusLabel = document.getElementById('offline-status-label');
+        if (offlineStatusLabel) offlineStatusLabel.textContent = `${statusList[1]?.name || '离线'}状态文案`;
         // 如果启用了统计功能，获取统计数据
         if (document.getElementById('metrics-container')) {
             await fetchMetrics();
@@ -297,23 +307,36 @@ function renderComments() {
         copy.append(meta, content);
         const actions = document.createElement('div');
         actions.className = 'comment-row__actions';
-        [['favorite', comment.favorite ? '取消收藏' : '收藏', comment.favorite ? '★' : '☆'],
-            ['pinned', comment.pinned ? '取消置顶' : '置顶', comment.pinned ? '●' : '○']].forEach(([key, label, symbol]) => {
+        [['favorite', comment.favorite ? '取消收藏' : '收藏', comment.favorite ? '♥' : '♡'],
+            ['pinned', comment.pinned ? '取消置顶' : '置顶', '⤒']].forEach(([key, label, symbol]) => {
             const button = document.createElement('button');
-            button.className = 'icon-btn';
+            button.className = `comment-action comment-action--${key}`;
             button.type = 'button';
             button.title = label;
             button.setAttribute('aria-label', label);
-            button.textContent = symbol;
+            button.setAttribute('aria-pressed', String(Boolean(comment[key])));
+            const icon = document.createElement('span');
+            icon.className = 'comment-action__icon';
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = symbol;
+            const text = document.createElement('span');
+            text.textContent = label;
+            button.append(icon, text);
             button.addEventListener('click', () => updateComment(comment, key));
             actions.appendChild(button);
         });
         const remove = document.createElement('button');
-        remove.className = 'icon-btn icon-btn--danger';
+        remove.className = 'comment-action comment-action--danger';
         remove.type = 'button';
         remove.title = '删除评论';
         remove.setAttribute('aria-label', '删除评论');
-        remove.textContent = '×';
+        const removeIcon = document.createElement('span');
+        removeIcon.className = 'comment-action__icon';
+        removeIcon.setAttribute('aria-hidden', 'true');
+        removeIcon.textContent = '×';
+        const removeText = document.createElement('span');
+        removeText.textContent = '删除';
+        remove.append(removeIcon, removeText);
         remove.addEventListener('click', () => removeComment(comment.id));
         actions.appendChild(remove);
         row.append(copy, actions);
@@ -368,6 +391,29 @@ async function saveDisplaySettings() {
     } catch (error) {
         console.error('保存展示设置失败:', error);
         alert(`保存展示设置失败：${error.message || error}`);
+    }
+}
+
+async function saveStatusDescriptions() {
+    const online = document.getElementById('online-status-desc');
+    const offline = document.getElementById('offline-status-desc');
+    if (!online?.value.trim() || !offline?.value.trim()) {
+        alert('两条状态文案都不能为空。');
+        return;
+    }
+    try {
+        const response = await postJSON('/api/admin/settings', {
+            online_status_desc: online.value.trim(),
+            offline_status_desc: offline.value.trim()
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || data.details || '保存失败');
+        displaySettings = data.settings;
+        statusList[0].desc = data.settings.online_status_desc;
+        statusList[1].desc = data.settings.offline_status_desc;
+        alert('状态文案已保存。');
+    } catch (error) {
+        alert(`保存状态文案失败：${error.message || error}`);
     }
 }
 
@@ -632,6 +678,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const saveDisplaySettingsBtn = document.getElementById('save-display-settings-btn');
     if (saveDisplaySettingsBtn) {
         saveDisplaySettingsBtn.addEventListener('click', saveDisplaySettings);
+    }
+    const saveStatusDescriptionsBtn = document.getElementById('save-status-descriptions-btn');
+    if (saveStatusDescriptionsBtn) {
+        saveStatusDescriptionsBtn.addEventListener('click', saveStatusDescriptions);
     }
     const saveSecretBtn = document.getElementById('save-secret-btn');
     if (saveSecretBtn) {

@@ -22,7 +22,7 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}" />
         <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}" />
         <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}?v=20260801-1" />
-        <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}" />
+        <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=20260801-2" />
         <style>
             body {
                 background: url('{{ c.page.background }}') no-repeat center center fixed;
@@ -31,7 +31,7 @@
         </style>
         <script src="{{ url_for('static', filename='color-mode.js') }}" defer></script>
         <script src="{{ url_for('static', filename='glass-select.js') }}?v=20260801-1" defer></script>
-        <script src="{{ url_for('static', filename='panel.js') }}?v=20260801-1" defer></script>
+        <script src="{{ url_for('static', filename='panel.js') }}?v=20260801-2" defer></script>
     </head>
 
     <body class="admin-panel">
@@ -129,6 +129,15 @@
                     <h2 class="panel-section-title">状态管理</h2>
                     <p>当前状态: <span id="current-status-name">加载中...</span></p>
                     <div class="status-selector" id="status-selector"></div>
+                    <div class="status-copy-grid">
+                        <label><span id="online-status-label">在线状态文案</span>
+                            <textarea id="online-status-desc" class="panel-input" maxlength="300" rows="3"></textarea>
+                        </label>
+                        <label><span id="offline-status-label">离线状态文案</span>
+                            <textarea id="offline-status-desc" class="panel-input" maxlength="300" rows="3"></textarea>
+                        </label>
+                    </div>
+                    <button class="btn btn-primary" id="save-status-descriptions-btn" type="button">保存状态文案</button>
                 </div>
             </div>
 
