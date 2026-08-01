@@ -240,6 +240,26 @@
   font: 700 17px/1 "Segoe UI Symbol", "Segoe UI", sans-serif;
 }
 
+.music-island__app-icon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+.music-island.has-player-icon .music-island__app {
+  background: none;
+  box-shadow: none;
+  border-color: transparent;
+  overflow: hidden;
+}
+
+.music-island.has-player-icon .music-island__app-glyph {
+  opacity: 0;
+}
+
 .music-island__playing-dot {
   position: absolute;
   right: -2px;

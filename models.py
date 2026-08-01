@@ -65,6 +65,7 @@ class MusicStateUpdateModel(BaseModel):
     source_url: str = Field(default='', max_length=4096)
     player_name: str = Field(default='', max_length=200)
     player_icon: str = Field(default='media-player', max_length=64)
+    player_icon_url: str = Field(default='', max_length=1024)
     library_path: str = Field(default='', max_length=4096)
     duration: float = Field(default=0, ge=0, le=86400)
     position: float = Field(default=0, ge=0, le=86400)

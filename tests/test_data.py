@@ -91,6 +91,7 @@ def test_music_state_survives_database_reopen_and_respects_privacy(tmp_path):
             "artist": "测试歌手",
             "player_name": "Windows 媒体播放器",
             "player_icon": "media-player",
+            "player_icon_url": "/music-player-icons/abc.png",
             "library_path": track.name,
             "duration": 120,
             "position": 5,
@@ -108,6 +109,7 @@ def test_music_state_survives_database_reopen_and_respects_privacy(tmp_path):
         assert reopened.music_state["active"] is True
         assert reopened.music_state["title"] == "本地歌曲"
         assert reopened.music_state["player_name"] == "Windows 媒体播放器"
+        assert reopened.music_state["player_icon_url"] == "/music-player-icons/abc.png"
         assert reopened.music_state["lyrics"][0]["text"] == "先一句"
         audio_url = reopened.music_state["audio_url"]
         assert audio_url.startswith("/api/music/audio/")
@@ -258,6 +260,36 @@ def test_comment_flags_migrate_and_survive_reopen(tmp_path):
         assert reopened.comment_admin_list()[0]["pinned"] is True
     finally:
         reopened.close()
+
+
+def test_music_player_icon_url_migrates_on_old_database(tmp_path):
+    database = tmp_path / "alive.db"
+    connection = sqlite3.connect(database)
+    connection.execute("CREATE TABLE music_player_meta (id INTEGER PRIMARY KEY NOT NULL, player_name VARCHAR(200) NOT NULL, player_icon VARCHAR(64) NOT NULL, library_path TEXT NOT NULL)")
+    connection.execute("INSERT INTO music_player_meta (id, player_name, player_icon, library_path) VALUES (0, '旧播放器', 'media-player', '')")
+    connection.commit()
+    connection.close()
+    config = ConfigModel()
+    config.main.database = f"sqlite:///{database.as_posix()}"
+    data = Data(config, start_scheduler=False)
+    try:
+        columns = {
+            row[1]
+            for row in sqlite3.connect(database)
+            .execute("PRAGMA table_info(music_player_meta)")
+            .fetchall()
+        }
+        assert "player_icon_url" in columns
+        assert data.music_state["player_icon_url"] == ""
+        stored = data.music_set(
+            {
+                "title": "迁移后的歌曲",
+                "player_icon_url": "/music-player-icons/def.png",
+            }
+        )
+        assert stored["player_icon_url"] == "/music-player-icons/def.png"
+    finally:
+        data.close()
 
 
 def test_device_reorder_swaps_adjacent_and_normalizes_profiles():

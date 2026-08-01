@@ -1039,6 +1039,34 @@ async def device_app_icon(request: Request):
     return {"success": True, "url": f"/app-icons/{file.name}", "sha256": digest}
 
 
+@app.post(
+    "/api/music/player-icon",
+    dependencies=[Depends(require_secret)],
+    tags=["数据修改 / Mutations"],
+    summary="上传音乐应用图标",
+)
+async def music_player_icon(request: Request):
+    content = await request.body()
+    if not content or len(content) > 1024 * 1024:
+        raise u.APIUnsuccessful(400, "player icon must be between 1 byte and 1 MiB")
+    signatures = (
+        (b"\x89PNG\r\n\x1a\n", ".png"),
+        (b"\xff\xd8\xff", ".jpg"),
+        (b"RIFF", ".webp"),
+    )
+    suffix = next((ext for signature, ext in signatures if content.startswith(signature)), "")
+    if suffix == ".webp" and content[8:12] != b"WEBP":
+        suffix = ""
+    if not suffix:
+        raise u.APIUnsuccessful(400, "player icon must be PNG, JPEG, or WebP")
+    digest = hashlib.sha256(content).hexdigest()
+    directory = Path(u.get_path("data/public/music-player-icons", is_dir=True))
+    file = directory / f"{digest}{suffix}"
+    if not file.exists():
+        file.write_bytes(content)
+    return {"success": True, "url": f"/music-player-icons/{file.name}", "sha256": digest}
+
+
 async def _json_object(request: Request) -> dict:
     try:
         body = await request.json()
@@ -1470,6 +1498,7 @@ POST_ONLY_PATHS = {
     "/api/music/set",
     "/api/music/clear",
     "/api/music/cover",
+    "/api/music/player-icon",
     "/api/device/app-icon",
     "/api/music/track/check",
     "/api/music/track/upload",

@@ -10,6 +10,7 @@
         speaker: root.querySelector('.music-island__speaker'),
         app: root.querySelector('.music-island__app'),
         appGlyph: root.querySelector('.music-island__app-glyph'),
+        appIcon: root.querySelector('.music-island__app-icon'),
         progress: root.querySelector('.music-island__progress'),
         progressFill: root.querySelector('.music-island__progress-fill'),
         elapsed: root.querySelector('.music-island__elapsed'),
@@ -116,12 +117,17 @@
         elements.cover.alt = coverUrl && state ? `${state.title} 的封面` : '';
     }
 
-    function setPlayerIcon(iconKey, reportedName) {
+    function setPlayerIcon(iconKey, reportedName, iconUrl) {
         const safeKey = Object.hasOwn(PLAYER_ICONS, iconKey) ? iconKey : 'media-player';
         const icon = PLAYER_ICONS[safeKey];
         const label = String(reportedName || icon.label);
         root.dataset.player = safeKey;
+        const uploadedUrl = String(iconUrl || '');
+        root.classList.toggle('has-player-icon', Boolean(uploadedUrl));
         elements.appGlyph.textContent = icon.glyph;
+        elements.appIcon.src = uploadedUrl;
+        elements.appIcon.hidden = !uploadedUrl;
+        elements.appIcon.alt = label;
         elements.app.title = label;
         elements.app.setAttribute('aria-label', `音乐应用：${label}`);
     }
@@ -190,7 +196,7 @@
         elements.title.textContent = state.title || '未知歌曲';
         elements.artist.textContent = state.artist || '未知艺术家';
         setCover(state.cover_url);
-        setPlayerIcon(state.player_icon, state.player_name);
+        setPlayerIcon(state.player_icon, state.player_name, state.player_icon_url);
 
         if (nextSong !== previousSong || String(state.audio_url || '') !== loadedAudioUrl) {
             loadAudio(state.audio_url);

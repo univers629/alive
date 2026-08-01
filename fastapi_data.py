@@ -97,6 +97,7 @@ class _MusicPlayerMetaData(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=0)
     player_name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     player_icon: Mapped[str] = mapped_column(String(64), nullable=False, default="media-player")
+    player_icon_url: Mapped[str] = mapped_column(String(1024), nullable=False, default="")
     library_path: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
 
@@ -228,14 +229,21 @@ class Data:
         """Apply small idempotent migrations for databases created by older releases."""
         if self.engine.dialect.name != "sqlite":
             return
-        columns = {column["name"] for column in inspect(self.engine).get_columns("comments")}
-        missing = {
-            "is_favorite": "ALTER TABLE comments ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0",
-            "is_pinned": "ALTER TABLE comments ADD COLUMN is_pinned BOOLEAN NOT NULL DEFAULT 0",
-        }
         with self.engine.begin() as connection:
-            for name, statement in missing.items():
-                if name not in columns:
+            comments_columns = {column["name"] for column in inspect(self.engine).get_columns("comments")}
+            missing_comments = {
+                "is_favorite": "ALTER TABLE comments ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0",
+                "is_pinned": "ALTER TABLE comments ADD COLUMN is_pinned BOOLEAN NOT NULL DEFAULT 0",
+            }
+            for name, statement in missing_comments.items():
+                if name not in comments_columns:
+                    connection.execute(text(statement))
+            music_columns = {column["name"] for column in inspect(self.engine).get_columns("music_player_meta")}
+            missing_music = {
+                "player_icon_url": "ALTER TABLE music_player_meta ADD COLUMN player_icon_url VARCHAR(1024) NOT NULL DEFAULT ''",
+            }
+            for name, statement in missing_music.items():
+                if name not in music_columns:
                     connection.execute(text(statement))
 
     @contextmanager
@@ -871,6 +879,7 @@ class Data:
                 "source_url": "",
                 "player_name": "",
                 "player_icon": "media-player",
+                "player_icon_url": "",
                 "duration": 0,
                 "position": 0,
                 "playing": False,
@@ -892,6 +901,7 @@ class Data:
             "source_url": state.source_url,
             "player_name": meta.player_name if meta else "",
             "player_icon": meta.player_icon if meta else "media-player",
+            "player_icon_url": meta.player_icon_url if meta else "",
             "duration": state.duration,
             "position": state.position,
             "playing": state.playing,
@@ -979,6 +989,7 @@ class Data:
             state.updated_at = now
             meta.player_name = payload.get("player_name", "")
             meta.player_icon = payload.get("player_icon", "media-player")
+            meta.player_icon_url = payload.get("player_icon_url", "")
             meta.library_path = payload.get("library_path", "")
             source.source_mode = source_mode
             source.source_id = payload.get("source_id", "")

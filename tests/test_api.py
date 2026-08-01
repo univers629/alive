@@ -73,6 +73,7 @@ def test_post_only_mutations_and_public_reads():
         assert client.get("/api/music/set").status_code == 405
         assert client.get("/api/music/clear").status_code == 405
         assert client.get("/api/music/cover").status_code == 405
+        assert client.get("/api/music/player-icon").status_code == 405
         assert client.get("/api/device/app-icon").status_code == 405
         assert client.get("/api/music/track/check").status_code == 405
         assert client.get("/api/music/track/upload").status_code == 405
@@ -99,6 +100,18 @@ def test_post_only_mutations_and_public_reads():
         Path(
             main.u.get_path(
                 "data/public/" + uploaded_icon.json()["url"].lstrip("/")
+            )
+        ).unlink(missing_ok=True)
+        player_icon = client.post(
+            "/api/music/player-icon",
+            headers={**headers, "Content-Type": "image/png"},
+            content=icon,
+        )
+        assert player_icon.status_code == 200
+        assert player_icon.json()["url"].startswith("/music-player-icons/")
+        Path(
+            main.u.get_path(
+                "data/public/" + player_icon.json()["url"].lstrip("/")
             )
         ).unlink(missing_ok=True)
         created = client.post(
@@ -201,6 +214,7 @@ def test_music_state_and_timestamped_lyrics_use_authenticated_post():
                 "album": "Local Test",
                 "player_name": "Windows 媒体播放器",
                 "player_icon": "media-player",
+                "player_icon_url": "/music-player-icons/abc.png",
                 "duration": 180,
                 "position": 12.5,
                 "playing": True,
@@ -218,6 +232,7 @@ def test_music_state_and_timestamped_lyrics_use_authenticated_post():
         assert public["title"] == "夜航"
         assert public["playing"] is True
         assert public["player_name"] == "Windows 媒体播放器"
+        assert public["player_icon_url"] == "/music-player-icons/abc.png"
         assert client.get("/api/status/query").json()["music"]["artist"] == "Alive"
 
         cleared = client.post("/api/music/clear", headers=headers, json={})
