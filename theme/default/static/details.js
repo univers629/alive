@@ -45,9 +45,10 @@
     icon.className = className; icon.setAttribute('aria-hidden', 'true');
     const fallback = String(record.app_name || '?').trim().slice(0, 1).toUpperCase() || '?';
     if (record.app_icon_url) {
+      icon.classList.add('has-image');
       const image = document.createElement('img');
       image.src = record.app_icon_url; image.alt = ''; image.loading = 'lazy'; image.decoding = 'async';
-      image.addEventListener('error', () => { image.remove(); icon.textContent = fallback; }, { once: true });
+      image.addEventListener('error', () => { image.remove(); icon.classList.remove('has-image'); icon.textContent = fallback; }, { once: true });
       icon.append(image);
     } else icon.textContent = fallback;
     return icon;

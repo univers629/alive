@@ -158,6 +158,7 @@ function updateDeviceCard(card, device, index, timeout, now, deviceIcons) {
     const appIcon = card.querySelector('.device-card__app-icon');
     const appIconUrl = String(fields.app_icon_url || '');
     const existingImage = appIcon.querySelector('img');
+    appIcon.classList.toggle('has-image', Boolean(appIconUrl));
     if (appIconUrl) {
         if (!existingImage || existingImage.getAttribute('src') !== appIconUrl) {
             const image = document.createElement('img');
@@ -166,6 +167,11 @@ function updateDeviceCard(card, device, index, timeout, now, deviceIcons) {
             image.width = 28;
             image.height = 28;
             image.loading = 'lazy';
+            image.decoding = 'async';
+            image.addEventListener('error', () => {
+                appIcon.classList.remove('has-image');
+                appIcon.replaceChildren(document.createTextNode(appInitial.toUpperCase()));
+            }, { once: true });
             appIcon.replaceChildren(image);
         }
     } else {
