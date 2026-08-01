@@ -173,10 +173,20 @@ body.admin-panel {
   background: var(--alive-input);
 }
 
+.favicon-preview-wrap--avatar { border-radius: 50%; }
+
 .favicon-preview {
   width: 64px;
   height: 64px;
   object-fit: contain;
+}
+
+.favicon-preview--avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: linear-gradient(135deg, var(--alive-accent), #45c4ff);
 }
 
 .favicon-upload-controls {
@@ -215,6 +225,44 @@ body.admin-panel {
 
 .favicon-file-name:empty {
   display: none;
+}
+
+.social-links-editor {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.social-link-editor-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 14px;
+  background: var(--alive-surface);
+}
+
+.social-link-editor-row:has(input:checked) {
+  border-color: color-mix(in srgb, var(--alive-accent) 48%, var(--alive-border-soft));
+}
+
+.social-link-editor-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--alive-ink);
+  font: 650 .74rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  white-space: nowrap;
+}
+
+.social-link-editor-row .panel-input {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
 }
 
 .panel-device-actions {

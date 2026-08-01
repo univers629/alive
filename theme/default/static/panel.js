@@ -14,6 +14,29 @@ let displaySettings = {
     offline_status_desc: ''
 };
 
+const SOCIAL_PLATFORMS = [
+    ['website', '个人网站', 'https://example.com'],
+    ['github', 'GitHub', 'https://github.com/username'],
+    ['gitlab', 'GitLab', 'https://gitlab.com/username'],
+    ['bilibili', '哔哩哔哩', 'https://space.bilibili.com/'],
+    ['weibo', '微博', 'https://weibo.com/username'],
+    ['xiaohongshu', '小红书', 'https://www.xiaohongshu.com/user/profile/'],
+    ['douyin', '抖音', 'https://www.douyin.com/user/'],
+    ['zhihu', '知乎', 'https://www.zhihu.com/people/username'],
+    ['qq', 'QQ', 'https://qm.qq.com/'],
+    ['wechat', '微信', 'https://weixin.qq.com/'],
+    ['telegram', 'Telegram', 'https://t.me/username'],
+    ['discord', 'Discord', 'https://discord.gg/'],
+    ['x', 'X', 'https://x.com/username'],
+    ['bluesky', 'Bluesky', 'https://bsky.app/profile/username'],
+    ['mastodon', 'Mastodon', 'https://mastodon.social/@username'],
+    ['instagram', 'Instagram', 'https://instagram.com/username'],
+    ['youtube', 'YouTube', 'https://youtube.com/@username'],
+    ['linkedin', 'LinkedIn', 'https://linkedin.com/in/username'],
+    ['steam', 'Steam', 'https://steamcommunity.com/id/username'],
+    ['email', '邮箱', 'name@example.com']
+];
+
 async function postJSON(url, body = {}) {
     return fetch(url, {
         method: 'POST',
@@ -60,6 +83,7 @@ async function initPage() {
         if (danmakuEnabled) danmakuEnabled.checked = displaySettings.danmaku_enabled !== false;
         const musicLibrary = document.getElementById('music-library');
         if (musicLibrary) musicLibrary.value = displaySettings.music_library || '/alive/music-library';
+        renderSocialLinksEditor(displaySettings.social_links || []);
         const onlineStatusDesc = document.getElementById('online-status-desc');
         if (onlineStatusDesc) onlineStatusDesc.value = displaySettings.online_status_desc || statusList[0]?.desc || '';
         const offlineStatusDesc = document.getElementById('offline-status-desc');
@@ -76,6 +100,39 @@ async function initPage() {
         console.error('初始化失败:', error);
         alert(`加载数据失败，请检查网络连接或重新登录\n${error}`);
     }
+}
+
+function renderSocialLinksEditor(savedLinks) {
+    const container = document.getElementById('social-links-editor');
+    if (!container) return;
+    const configured = new Map(savedLinks.map((item) => [item.platform, item.url]));
+    container.replaceChildren();
+    SOCIAL_PLATFORMS.forEach(([platform, label, placeholder]) => {
+        const row = document.createElement('label');
+        row.className = 'social-link-editor-row';
+        const toggle = document.createElement('span');
+        toggle.className = 'social-link-editor-toggle';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.dataset.platform = platform;
+        checkbox.checked = configured.has(platform);
+        const name = document.createElement('span');
+        name.textContent = label;
+        toggle.append(checkbox, name);
+        const input = document.createElement('input');
+        input.className = 'panel-input';
+        input.type = platform === 'email' ? 'email' : 'url';
+        input.inputMode = platform === 'email' ? 'email' : 'url';
+        input.dataset.socialUrl = platform;
+        input.maxLength = 2048;
+        input.placeholder = placeholder;
+        input.value = configured.get(platform) || '';
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked) input.focus();
+        });
+        row.append(toggle, input);
+        container.appendChild(row);
+    });
 }
 
 // 渲染状态选择器
@@ -394,6 +451,32 @@ async function saveDisplaySettings() {
     }
 }
 
+async function saveSocialLinks() {
+    const entries = [];
+    for (const checkbox of document.querySelectorAll('#social-links-editor input[type="checkbox"]')) {
+        if (!checkbox.checked) continue;
+        const platform = checkbox.dataset.platform;
+        const input = document.querySelector(`#social-links-editor input[data-social-url="${CSS.escape(platform)}"]`);
+        const url = input?.value.trim() || '';
+        if (!url) {
+            alert(`请填写 ${checkbox.parentElement?.textContent?.trim() || platform} 的链接。`);
+            input?.focus();
+            return;
+        }
+        entries.push({ platform, url });
+    }
+    try {
+        const response = await postJSON('/api/admin/settings', { social_links: entries });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || data.details || '保存失败');
+        displaySettings = data.settings;
+        renderSocialLinksEditor(displaySettings.social_links || []);
+        alert('个人链接已保存。');
+    } catch (error) {
+        alert(`保存个人链接失败：${error.message || error}`);
+    }
+}
+
 async function saveStatusDescriptions() {
     const online = document.getElementById('online-status-desc');
     const offline = document.getElementById('offline-status-desc');
@@ -417,10 +500,10 @@ async function saveStatusDescriptions() {
     }
 }
 
-async function uploadFavicon() {
-    const input = document.getElementById('favicon-file');
-    const status = document.getElementById('favicon-upload-status');
-    const preview = document.getElementById('favicon-preview');
+async function uploadProfileAvatar() {
+    const input = document.getElementById('profile-avatar-file');
+    const status = document.getElementById('profile-avatar-upload-status');
+    const preview = document.getElementById('profile-avatar-preview');
     const file = input?.files?.[0];
     if (!file) {
         status.textContent = '请选择 PNG、JPEG 或 WebP 图片。';
@@ -432,7 +515,7 @@ async function uploadFavicon() {
     }
     status.textContent = '上传中...';
     try {
-        const response = await fetch('/api/admin/favicon', {
+        const response = await fetch('/api/admin/profile/avatar', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': file.type },
@@ -440,10 +523,10 @@ async function uploadFavicon() {
         });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || '上传失败');
-        preview.src = data.favicon;
-        status.textContent = '网站图标已更新。';
+        preview.src = data.profile_avatar;
+        status.textContent = '主页头像和网站图标已更新。';
         input.value = '';
-        document.getElementById('favicon-file-name').textContent = '';
+        document.getElementById('profile-avatar-file-name').textContent = '';
     } catch (error) {
         status.textContent = `上传失败：${error.message || error}`;
     }
@@ -687,22 +770,24 @@ document.addEventListener('DOMContentLoaded', function () {
     if (saveSecretBtn) {
         saveSecretBtn.addEventListener('click', saveSecret);
     }
-    const faviconFile = document.getElementById('favicon-file');
-    if (faviconFile) {
-        faviconFile.addEventListener('change', () => {
-            const file = faviconFile.files?.[0];
-            document.getElementById('favicon-file-name').textContent = file ? file.name : '';
+    const profileAvatarFile = document.getElementById('profile-avatar-file');
+    if (profileAvatarFile) {
+        profileAvatarFile.addEventListener('change', () => {
+            const file = profileAvatarFile.files?.[0];
+            document.getElementById('profile-avatar-file-name').textContent = file ? file.name : '';
             if (!file) return;
-            const preview = document.getElementById('favicon-preview');
+            const preview = document.getElementById('profile-avatar-preview');
             const objectUrl = URL.createObjectURL(file);
             preview.onload = () => URL.revokeObjectURL(objectUrl);
             preview.src = objectUrl;
         });
     }
-    const chooseFaviconBtn = document.getElementById('choose-favicon-btn');
-    if (chooseFaviconBtn) chooseFaviconBtn.addEventListener('click', () => faviconFile?.click());
-    const uploadFaviconBtn = document.getElementById('upload-favicon-btn');
-    if (uploadFaviconBtn) uploadFaviconBtn.addEventListener('click', uploadFavicon);
+    const chooseProfileAvatarBtn = document.getElementById('choose-profile-avatar-btn');
+    if (chooseProfileAvatarBtn) chooseProfileAvatarBtn.addEventListener('click', () => profileAvatarFile?.click());
+    const uploadProfileAvatarBtn = document.getElementById('upload-profile-avatar-btn');
+    if (uploadProfileAvatarBtn) uploadProfileAvatarBtn.addEventListener('click', uploadProfileAvatar);
+    const saveSocialLinksBtn = document.getElementById('save-social-links-btn');
+    if (saveSocialLinksBtn) saveSocialLinksBtn.addEventListener('click', saveSocialLinks);
     const clearCommentsBtn = document.getElementById('clear-comments-btn');
     if (clearCommentsBtn) clearCommentsBtn.addEventListener('click', clearComments);
 

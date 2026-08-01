@@ -606,6 +606,7 @@ class Data:
             "danmaku_enabled",
             "page_name",
             "page_title",
+            "social_links",
             "music_library",
             "online_status_desc",
             "offline_status_desc",

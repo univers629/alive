@@ -625,8 +625,9 @@ def test_admin_comment_flags_reorder_and_panel_controls():
         ).status_code == 400
 
         panel = client.get("/panel", headers=headers)
-        assert 'id="favicon-file" class="visually-hidden-file"' in panel.text
-        assert 'id="choose-favicon-btn"' in panel.text
+        assert 'id="profile-avatar-file" class="visually-hidden-file"' in panel.text
+        assert 'id="choose-profile-avatar-btn"' in panel.text
+        assert 'id="social-links-editor"' in panel.text
         assert 'id="comments-list"' in panel.text
         assert "id=\"danmaku-enabled\"" in panel.text
         assert "sort_order" not in panel.text
@@ -661,6 +662,10 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
                 "danmaku_enabled": False,
                 "page_name": "Codex",
                 "page_title": "Codex Status",
+                "social_links": [
+                    {"platform": "github", "url": "https://github.com/univers629"},
+                    {"platform": "email", "url": "codex@example.com"},
+                ],
                 "online_status_desc": "现在可以联系我。",
                 "offline_status_desc": "现在暂时无法联系。",
                 "music_library": str(tmp_path / "music"),
@@ -671,11 +676,14 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert settings.json()["settings"]["danmaku_enabled"] is False
         assert settings.json()["settings"]["page_name"] == "Codex"
         assert settings.json()["settings"]["page_title"] == "Codex Status"
+        assert settings.json()["settings"]["social_links"][0]["platform"] == "github"
+        assert settings.json()["settings"]["social_links"][1]["url"] == "mailto:codex@example.com"
         assert settings.json()["settings"]["online_status_desc"] == "现在可以联系我。"
         assert settings.json()["settings"]["offline_status_desc"] == "现在暂时无法联系。"
         assert settings.json()["settings"]["music_library"] == str((tmp_path / "music").resolve())
         assert client.get("/api/status/query").json()["visit_metric"]["mode"] == "monthly"
         assert "Codex's" in client.get("/").text
+        assert "https://github.com/univers629" in client.get("/").text
         assert "<title>Codex Status</title>" in client.get("/").text
         assert "<title>Codex Status · 详情</title>" in client.get("/details").text
         client.post("/panel/logout")
@@ -735,6 +743,7 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
                 "visit_display_mode": "total",
                 "danmaku_enabled": True,
                 "page_name": main.c.page.name,
+                "social_links": [],
                 "music_library": main.c.main.music_library,
             },
         )
@@ -855,6 +864,52 @@ def test_admin_favicon_upload_validates_and_writes_64px_ico(tmp_path, monkeypatc
             content=b"x" * (5 * 1024 * 1024 + 1),
         )
         assert oversize.status_code == 413
+
+
+def test_admin_profile_avatar_generates_avatar_favicon_and_validates_social_links(tmp_path, monkeypatch):
+    avatar_path = tmp_path / "public" / "profile-avatar.webp"
+    favicon_path = tmp_path / "public" / "favicon.ico"
+    monkeypatch.setattr(main, "PROFILE_AVATAR_PATH", avatar_path)
+    monkeypatch.setattr(main, "FAVICON_PATH", favicon_path)
+
+    image = Image.new("RGB", (240, 120), (120, 60, 220))
+    stream = io.BytesIO()
+    image.save(stream, format="JPEG")
+    headers = {"Authorization": "Bearer test-secret-1234"}
+
+    with TestClient(main.app) as client:
+        uploaded = client.post(
+            "/api/admin/profile/avatar",
+            headers=headers,
+            content=stream.getvalue(),
+        )
+        assert uploaded.status_code == 200
+        assert uploaded.json()["profile_avatar"].startswith("/profile-avatar.webp?v=")
+        assert uploaded.json()["favicon"].startswith("/favicon.ico?v=")
+        with Image.open(avatar_path) as avatar:
+            assert avatar.format == "WEBP"
+            assert avatar.size == (512, 512)
+        with Image.open(favicon_path) as favicon:
+            assert favicon.format == "ICO"
+            assert favicon.size == (64, 64)
+        saved = client.post(
+            "/api/admin/settings",
+            headers=headers,
+            json={
+                "social_links": [
+                    {"platform": "bilibili", "url": "https://space.bilibili.com/123"},
+                    {"platform": "email", "url": "alive@example.com"},
+                ]
+            },
+        )
+        assert saved.status_code == 200
+        assert [item["platform"] for item in saved.json()["settings"]["social_links"]] == ["bilibili", "email"]
+        assert "mailto:alive@example.com" in client.get("/").text
+        assert client.post(
+            "/api/admin/settings",
+            headers=headers,
+            json={"social_links": [{"platform": "github", "url": "javascript:alert(1)"}]},
+        ).status_code == 400
 
 
 def test_admin_can_rotate_secret_without_echoing_it(tmp_path):

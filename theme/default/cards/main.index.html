@@ -35,9 +35,37 @@
     <span>人</span>
 </div>
 
-<h1><ruby>似<rt>sǐ</rt></ruby>了吗?</h1>
-<h2 class="main-status-heading"><i><b>{{ username }}'s</b></i> Status:<br><a id="status">{{ status.name }}</a></h2>
-<p id="additional-info">{{ status.desc | safe }}</p>
+<div class="profile-status-layout">
+    <aside class="profile-sidebar" aria-label="个人资料">
+        <div class="profile-avatar" aria-label="{{ username }} 的头像">
+            {% if profile_avatar %}
+            <img src="{{ profile_avatar }}" alt="{{ username }} 的头像">
+            {% else %}
+            <span aria-hidden="true">{{ username[0] }}</span>
+            {% endif %}
+        </div>
+        <strong class="profile-sidebar__name">{{ username }}</strong>
+        {% if social_links %}
+        <nav class="profile-social-links" aria-label="个人链接">
+            {% for social in social_links %}
+            <a class="profile-social-link" href="{{ social.url }}" target="_blank" rel="me noopener noreferrer" aria-label="打开 {{ social.label }}">
+                {% if social.icon.startswith('http') %}
+                <img src="{{ social.icon }}" alt="" aria-hidden="true" loading="lazy">
+                {% else %}
+                <span class="profile-social-link__fallback" aria-hidden="true">{{ social.icon }}</span>
+                {% endif %}
+                <span>{{ social.label }}</span>
+            </a>
+            {% endfor %}
+        </nav>
+        {% endif %}
+    </aside>
+    <section class="status-hero">
+        <h1><ruby>似<rt>sǐ</rt></ruby>了吗?</h1>
+        <h2 class="main-status-heading"><i><b>{{ username }}'s</b></i> Status:<br><a id="status">{{ status.name }}</a></h2>
+        <p id="additional-info">{{ status.desc | safe }}</p>
+    </section>
+</div>
 <section class="device-overview" aria-labelledby="device-overview-title">
     <div class="device-overview__header">
         <div>

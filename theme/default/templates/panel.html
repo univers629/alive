@@ -90,19 +90,28 @@
                         `ALIVE_MUSIC_LIBRARY_HOST` 中配置，修改挂载后需要重启容器。</p>
                     <button class="btn btn-primary" id="save-display-settings-btn">保存主页设置</button>
                     <div class="favicon-upload">
-                        <div class="favicon-preview-wrap">
-                            <img id="favicon-preview" class="favicon-preview" src="{{ page_favicon }}" alt="当前网站图标">
+                        <div class="favicon-preview-wrap favicon-preview-wrap--avatar">
+                            <img id="profile-avatar-preview" class="favicon-preview favicon-preview--avatar" src="{{ profile_avatar }}" alt="当前主页头像">
                         </div>
                         <div class="favicon-upload-controls">
-                            <label>网站图标
-                                <input id="favicon-file" class="visually-hidden-file" type="file" accept="image/png,image/jpeg,image/webp">
+                            <label>主页头像与网站图标
+                                <input id="profile-avatar-file" class="visually-hidden-file" type="file" accept="image/png,image/jpeg,image/webp">
                             </label>
-                            <button class="btn btn-secondary" id="choose-favicon-btn" type="button">选择图片</button>
-                            <span class="favicon-file-name" id="favicon-file-name" role="status"></span>
-                            <button class="btn btn-secondary" id="upload-favicon-btn" type="button">上传图标</button>
-                            <span class="panel-help" id="favicon-upload-status" role="status"></span>
+                            <button class="btn btn-secondary" id="choose-profile-avatar-btn" type="button">选择图片</button>
+                            <span class="favicon-file-name" id="profile-avatar-file-name" role="status"></span>
+                            <button class="btn btn-secondary" id="upload-profile-avatar-btn" type="button">上传并应用</button>
+                            <span class="panel-help" id="profile-avatar-upload-status" role="status">上传后会居中裁剪为头像，并同步生成网站图标。</span>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-section">
+                    <h2 class="panel-section-title">个人链接</h2>
+                    <p class="panel-help">勾选需要展示的平台并填写链接；仅会在主页头像下显示已勾选且链接有效的平台。</p>
+                    <div class="social-links-editor" id="social-links-editor"></div>
+                    <button class="btn btn-primary" id="save-social-links-btn" type="button">保存个人链接</button>
                 </div>
             </div>
 

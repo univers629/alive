@@ -18,6 +18,7 @@ from mimetypes import guess_type
 from pathlib import Path
 from time import time
 from traceback import format_exc
+from urllib.parse import urlparse
 
 import pytz
 import uvicorn
@@ -109,7 +110,94 @@ d = Data(config=c)
 netease_resolver = NeteaseResolver()
 tz = pytz.timezone(c.main.timezone)
 FAVICON_PATH = Path(u.get_path("data/public/favicon.ico"))
+PROFILE_AVATAR_PATH = Path(u.get_path("data/public/profile-avatar.webp"))
 MAX_FAVICON_BYTES = 5 * 1024 * 1024
+
+SOCIAL_PLATFORMS = {
+    "website": {"label": "个人网站", "icon": "◎"},
+    "github": {"label": "GitHub", "icon": "https://cdn.simpleicons.org/github"},
+    "gitlab": {"label": "GitLab", "icon": "https://cdn.simpleicons.org/gitlab"},
+    "bilibili": {"label": "哔哩哔哩", "icon": "https://cdn.simpleicons.org/bilibili"},
+    "weibo": {"label": "微博", "icon": "https://cdn.simpleicons.org/sinaweibo"},
+    "xiaohongshu": {"label": "小红书", "icon": "https://cdn.simpleicons.org/xiaohongshu"},
+    "douyin": {"label": "抖音", "icon": "https://cdn.simpleicons.org/douyin"},
+    "zhihu": {"label": "知乎", "icon": "https://cdn.simpleicons.org/zhihu"},
+    "qq": {"label": "QQ", "icon": "https://cdn.simpleicons.org/qq"},
+    "wechat": {"label": "微信", "icon": "https://cdn.simpleicons.org/wechat"},
+    "telegram": {"label": "Telegram", "icon": "https://cdn.simpleicons.org/telegram"},
+    "discord": {"label": "Discord", "icon": "https://cdn.simpleicons.org/discord"},
+    "x": {"label": "X", "icon": "https://cdn.simpleicons.org/x"},
+    "bluesky": {"label": "Bluesky", "icon": "https://cdn.simpleicons.org/bluesky"},
+    "mastodon": {"label": "Mastodon", "icon": "https://cdn.simpleicons.org/mastodon"},
+    "instagram": {"label": "Instagram", "icon": "https://cdn.simpleicons.org/instagram"},
+    "youtube": {"label": "YouTube", "icon": "https://cdn.simpleicons.org/youtube"},
+    "linkedin": {"label": "LinkedIn", "icon": "https://cdn.simpleicons.org/linkedin"},
+    "steam": {"label": "Steam", "icon": "https://cdn.simpleicons.org/steam"},
+    "email": {"label": "邮箱", "icon": "✉"},
+}
+
+
+def _social_links() -> list[dict[str, str]]:
+    """Return saved public links after re-validating their persisted JSON."""
+    try:
+        configured = json.loads(d.runtime_setting("social_links", "[]"))
+    except (TypeError, json.JSONDecodeError):
+        return []
+    if not isinstance(configured, list):
+        return []
+
+    links: list[dict[str, str]] = []
+    used: set[str] = set()
+    for item in configured[:len(SOCIAL_PLATFORMS)]:
+        if not isinstance(item, dict):
+            continue
+        platform = item.get("platform")
+        url = item.get("url")
+        if platform not in SOCIAL_PLATFORMS or platform in used or not isinstance(url, str):
+            continue
+        url = url.strip()
+        if platform == "email":
+            if "@" not in url or any(character.isspace() for character in url):
+                continue
+            url = url if url.startswith("mailto:") else f"mailto:{url}"
+        else:
+            parsed = urlparse(url)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                continue
+        used.add(platform)
+        links.append({"platform": platform, "url": url, **SOCIAL_PLATFORMS[platform]})
+    return links
+
+
+def _normalize_social_links(value: object) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        raise u.APIUnsuccessful(400, "social_links must be a list")
+    normalized: list[dict[str, str]] = []
+    used: set[str] = set()
+    for item in value:
+        if not isinstance(item, dict):
+            raise u.APIUnsuccessful(400, "each social link must be an object")
+        platform = item.get("platform")
+        url = str(item.get("url", "")).strip()
+        if platform not in SOCIAL_PLATFORMS:
+            raise u.APIUnsuccessful(400, "unsupported social platform")
+        if platform in used:
+            raise u.APIUnsuccessful(400, "each social platform can only be shown once")
+        if not url or len(url) > 2048:
+            raise u.APIUnsuccessful(400, "social link must be 1 to 2048 characters")
+        if platform == "email":
+            if url.startswith("mailto:"):
+                url = url.removeprefix("mailto:")
+            if "@" not in url or any(character.isspace() for character in url):
+                raise u.APIUnsuccessful(400, "email must be a valid email address")
+            url = f"mailto:{url}"
+        else:
+            parsed = urlparse(url)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                raise u.APIUnsuccessful(400, "social links must use an http or https URL")
+        used.add(platform)
+        normalized.append({"platform": platform, "url": url})
+    return normalized
 
 
 _active_viewers = 0
@@ -316,6 +404,8 @@ def index(request: Request):
         dirname="cards",
         username=d.page_name,
         status=d.status_dict[1],
+        profile_avatar=profile_avatar_url(),
+        social_links=_social_links(),
         last_updated=datetime.fromtimestamp(d.last_updated, tz).strftime("%Y-%m-%d %H:%M:%S %Z"),
         visit_metric=d.public_visit_metric,
         online_viewers=_active_viewers,
@@ -449,6 +539,15 @@ def favicon_url() -> str:
     return c.page.favicon
 
 
+def profile_avatar_url() -> str:
+    if PROFILE_AVATAR_PATH.is_file():
+        try:
+            return f"/profile-avatar.webp?v={PROFILE_AVATAR_PATH.stat().st_mtime_ns}"
+        except OSError:
+            pass
+    return ""
+
+
 @app.get("/docs", response_class=HTMLResponse, include_in_schema=False)
 def documentation():
     return FileResponse(
@@ -478,6 +577,8 @@ def metadata_response() -> dict:
             "title": d.page_title,
             "desc": c.page.desc,
             "favicon": favicon_url(),
+            "profile_avatar": profile_avatar_url(),
+            "social_links": _social_links(),
             "background": c.page.background,
             "theme": "default",
         },
@@ -1164,6 +1265,8 @@ def admin_snapshot():
             "page_name": d.page_name,
             "page_title": d.page_title,
             "favicon": favicon_url(),
+            "profile_avatar": profile_avatar_url(),
+            "social_links": _social_links(),
             "music_library": d.music_library,
             "online_status_desc": d.online_status_desc,
             "offline_status_desc": d.offline_status_desc,
@@ -1201,6 +1304,11 @@ async def admin_settings(request: Request):
         if len(page_title) > 120:
             raise u.APIUnsuccessful(400, "page_title must be 120 characters or fewer")
         d.set_runtime_setting("page_title", page_title)
+    if "social_links" in body:
+        d.set_runtime_setting(
+            "social_links",
+            json.dumps(_normalize_social_links(body["social_links"]), ensure_ascii=False),
+        )
     for key in ("online_status_desc", "offline_status_desc"):
         if key in body:
             description = _single_line_text(str(body[key]))
@@ -1228,6 +1336,8 @@ async def admin_settings(request: Request):
             "page_name": d.page_name,
             "page_title": d.page_title,
             "favicon": favicon_url(),
+            "profile_avatar": profile_avatar_url(),
+            "social_links": _social_links(),
             "music_library": d.music_library,
             "online_status_desc": d.online_status_desc,
             "offline_status_desc": d.offline_status_desc,
@@ -1270,6 +1380,56 @@ async def admin_favicon(request: Request):
     except (UnidentifiedImageError, OSError, ValueError):
         raise u.APIUnsuccessful(415, "favicon must be a valid PNG, JPEG, or WebP image")
     return {"success": True, "favicon": favicon_url()}
+
+
+@app.post(
+    "/api/admin/profile/avatar",
+    dependencies=[Depends(require_secret)],
+    tags=["后台管理 / Admin"],
+    summary="上传主页头像并生成网站图标",
+)
+async def admin_profile_avatar(request: Request):
+    body = await request.body()
+    if not body:
+        raise u.APIUnsuccessful(400, "avatar body is required")
+    if len(body) > MAX_FAVICON_BYTES:
+        raise u.APIUnsuccessful(413, "avatar must be 5 MiB or smaller")
+    try:
+        with Image.open(io.BytesIO(body)) as source:
+            if source.format not in {"PNG", "JPEG", "WEBP"}:
+                raise u.APIUnsuccessful(415, "avatar must be PNG, JPEG, or WebP")
+            width, height = source.size
+            if not 16 <= width <= 4096 or not 16 <= height <= 4096:
+                raise u.APIUnsuccessful(400, "avatar dimensions must be between 16 and 4096 pixels")
+            size = min(width, height)
+            left = (width - size) // 2
+            top = (height - size) // 2
+            square = source.convert("RGBA").crop((left, top, left + size, top + size))
+            avatar = square.resize((512, 512), Image.Resampling.LANCZOS)
+            favicon_image = square.resize((64, 64), Image.Resampling.LANCZOS)
+            PROFILE_AVATAR_PATH.parent.mkdir(parents=True, exist_ok=True)
+            FAVICON_PATH.parent.mkdir(parents=True, exist_ok=True)
+            avatar_temp = PROFILE_AVATAR_PATH.with_name(
+                f".{PROFILE_AVATAR_PATH.name}.{secrets.token_hex(8)}.tmp"
+            )
+            favicon_temp = FAVICON_PATH.with_name(f".{FAVICON_PATH.name}.{secrets.token_hex(8)}.tmp")
+            try:
+                avatar.save(avatar_temp, format="WEBP", quality=90, method=6)
+                favicon_image.save(favicon_temp, format="ICO", sizes=[(64, 64)])
+                os.replace(avatar_temp, PROFILE_AVATAR_PATH)
+                os.replace(favicon_temp, FAVICON_PATH)
+            finally:
+                avatar_temp.unlink(missing_ok=True)
+                favicon_temp.unlink(missing_ok=True)
+    except u.APIUnsuccessful:
+        raise
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise u.APIUnsuccessful(415, "avatar must be a valid PNG, JPEG, or WebP image")
+    return {
+        "success": True,
+        "profile_avatar": profile_avatar_url(),
+        "favicon": favicon_url(),
+    }
 
 
 @app.post(
@@ -1421,6 +1581,7 @@ async def admin_panel(request: Request):
         page_name=d.page_name,
         page_title=d.page_title,
         page_favicon=favicon_url(),
+        profile_avatar=profile_avatar_url(),
         inject="",
     )
     if content is None:
@@ -1505,6 +1666,7 @@ POST_ONLY_PATHS = {
     "/api/comments/create",
     "/api/admin/settings",
     "/api/admin/favicon",
+    "/api/admin/profile/avatar",
     "/api/admin/secret",
     "/api/admin/device/profile",
     "/api/admin/device/reorder",
