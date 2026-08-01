@@ -1316,7 +1316,7 @@ async def device_private_mode(request: Request):
     if value is None:
         raise u.APIUnsuccessful(400, "'private' arg must be boolean")
     d.private_mode = value
-    return {"success": True}
+    return {"success": True, "private_mode": d.private_mode, "devices": d.admin_device_list}
 
 
 @app.get(

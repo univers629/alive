@@ -115,8 +115,8 @@ def test_music_state_survives_database_reopen_and_respects_privacy(tmp_path):
         assert audio_url.startswith("/api/music/audio/")
         assert reopened.music_audio_path(audio_url.rsplit("/", 1)[-1]) == track
         reopened.private_mode = True
-        assert reopened.music_state["active"] is False
-        assert reopened.music_audio_path(audio_url.rsplit("/", 1)[-1]) is None
+        assert reopened.music_state["active"] is True
+        assert reopened.music_audio_path(audio_url.rsplit("/", 1)[-1]) == track
     finally:
         reopened.close()
 
@@ -198,7 +198,7 @@ def test_health_state_survives_database_reopen_and_respects_privacy(tmp_path):
         assert reopened.health_state["heart_rate"] == 72
         assert reopened.health_state["steps"] == 4321
         reopened.private_mode = True
-        assert reopened.health_state["active"] is False
+        assert reopened.health_state["active"] is True
     finally:
         reopened.close()
 

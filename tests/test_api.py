@@ -127,6 +127,7 @@ def test_post_only_mutations_and_public_reads():
                     "platform": "Windows 11",
                     "cpu_cores": 16,
                     "memory_gb": 32,
+                    "activity_app_name": "Visual Studio Code",
                 },
             },
         )
@@ -178,7 +179,11 @@ def test_post_only_mutations_and_public_reads():
             json={"private": True},
         )
         assert private.status_code == 200
-        assert client.get("/api/status/query").json()["private_mode"] is True
+        assert private.json()["private_mode"] is True
+        assert private.json()["devices"]["desktop"]["status"] == "Visual Studio Code"
+        private_query = client.get("/api/status/query").json()
+        assert private_query["private_mode"] is True
+        assert private_query["device"]["desktop"]["status"] == "Visual Studio Code"
 
         client.post(
             "/api/device/private",
@@ -512,8 +517,9 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in device_css
         assert ".steps-card__ring {" in device_css
         assert ".tablet-device-icon {" in device_css
-        assert "width: 25px;" in device_css
-        assert "height: 17px;" in device_css
+        tablet_css = client.get("/static/main.css").text
+        assert "width: 27px;" in tablet_css
+        assert "#4ebbed;" in tablet_css
 
         select_css = client.get("/static/glass-select.css").text
         assert "border-radius: 999px;" in select_css

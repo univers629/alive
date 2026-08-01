@@ -226,6 +226,19 @@ async function setStatus(statusIndex) {
 }
 
 // 渲染设备列表
+function renderPanelDeviceIcon(container, iconKey) {
+    container.replaceChildren();
+    if (iconKey === 'tablet') {
+        const tablet = document.createElement('span');
+        tablet.className = 'tablet-device-icon';
+        tablet.setAttribute('aria-hidden', 'true');
+        container.appendChild(tablet);
+        return;
+    }
+    const icons = { desktop: '🖥️', laptop: '💻', phone: '📱', watch: '⌚', server: '▤', game: '🎮', other: '◇', bilibili: '◉' };
+    container.textContent = icons[iconKey] || icons.other;
+}
+
 function renderDeviceList() {
     const tbody = document.getElementById('device-list-body');
     tbody.innerHTML = '';
@@ -269,13 +282,16 @@ function renderDeviceList() {
         tdName.appendChild(nameInput);
 
         const tdIcon = document.createElement('td');
+        tdIcon.className = 'device-icon-select-cell';
+        const iconPreview = document.createElement('span');
+        iconPreview.className = 'panel-device-icon-preview';
         const iconSelect = document.createElement('select');
         iconSelect.className = 'panel-input';
         const iconOptions = {
             desktop: '🖥️ 台式机',
             laptop: '💻 笔记本',
             phone: '📱 手机',
-            tablet: '▯ 平板',
+            tablet: '▰ 平板',
             watch: '⌚ 手表',
             server: '▤ 服务器',
             game: '🎮 游戏设备',
@@ -289,7 +305,9 @@ function renderDeviceList() {
             option.selected = value === (profile.icon_key || 'desktop');
             iconSelect.appendChild(option);
         }
-        tdIcon.appendChild(iconSelect);
+        renderPanelDeviceIcon(iconPreview, profile.icon_key || 'desktop');
+        iconSelect.addEventListener('change', () => renderPanelDeviceIcon(iconPreview, iconSelect.value));
+        tdIcon.append(iconPreview, iconSelect);
 
         const tdPublic = document.createElement('td');
         const publicInput = document.createElement('input');
@@ -676,7 +694,10 @@ async function togglePrivateMode(isPrivate) {
         const data = await response.json();
 
         if (data.success) {
-            privateMode = isPrivate;
+            privateMode = Boolean(data.private_mode);
+            deviceData = data.devices || deviceData;
+            deviceOrder = Object.keys(deviceData);
+            renderDeviceList();
         } else {
             alert('切换隐私模式失败: ' + (data.message || '未知错误'));
             document.getElementById('private-mode-toggle').checked = privateMode;

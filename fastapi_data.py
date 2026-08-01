@@ -386,13 +386,32 @@ class Data:
     def _serialize_device(
         device: _DeviceStatusData,
         profile: _DeviceProfileData | None = None,
+        redact_desktop_window_title: bool = False,
     ) -> dict[str, Any]:
+        fields = device.fields or {}
+        status = device.status
+        device_type = str(fields.get("device_type") or fields.get("activity_device_type") or "").casefold()
+        platform = str(fields.get("platform") or fields.get("os") or "").casefold()
+        is_desktop = (
+            device_type in {"desktop", "laptop", "server"}
+            or platform.startswith("windows")
+            or "cpu_cores" in fields
+            or "processor_count" in fields
+        )
+        if redact_desktop_window_title and is_desktop:
+            app_name = str(
+                fields.get("activity_app_name")
+                or fields.get("app_name")
+                or fields.get("activity_app_id")
+                or ""
+            ).strip()
+            status = app_name or ("正在使用应用" if device.using else "未在使用")
         result = {
             "id": device.id,
             "show_name": profile.display_name if profile and profile.display_name else device.show_name,
             "using": device.using,
-            "status": device.status,
-            "fields": device.fields or {},
+            "status": status,
+            "fields": fields,
             "last_updated": device.last_updated,
         }
         result["profile"] = {
@@ -405,8 +424,6 @@ class Data:
 
     @property
     def _raw_device_list(self) -> dict[str, _DeviceStatusData]:
-        if self.private_mode:
-            return {}
         with self.session() as session:
             devices = list(session.scalars(select(_DeviceStatusData)).all())
             return {device.id: device for device in devices}
@@ -416,13 +433,18 @@ class Data:
         devices = self._raw_device_list
         if not devices:
             return {}
+        redact_desktop_window_title = self.private_mode
         with self.session() as session:
             profiles = {
                 profile.id: profile
                 for profile in session.scalars(select(_DeviceProfileData)).all()
             }
             return {
-                device_id: self._serialize_device(device, profiles.get(device_id))
+                device_id: self._serialize_device(
+                    device,
+                    profiles.get(device_id),
+                    redact_desktop_window_title,
+                )
                 for device_id, device in devices.items()
             }
 
@@ -462,6 +484,7 @@ class Data:
 
     @property
     def admin_device_list(self) -> dict[str, dict[str, Any]]:
+        redact_desktop_window_title = self.private_mode
         with self.session() as session:
             devices = list(session.scalars(select(_DeviceStatusData)).all())
             profiles = {
@@ -469,7 +492,11 @@ class Data:
                 for profile in session.scalars(select(_DeviceProfileData)).all()
             }
             serialized = {
-                device.id: self._serialize_device(device, profiles.get(device.id))
+                device.id: self._serialize_device(
+                    device,
+                    profiles.get(device.id),
+                    redact_desktop_window_title,
+                )
                 for device in devices
             }
         return dict(
@@ -1207,8 +1234,6 @@ class Data:
 
     @property
     def health_state(self) -> dict[str, Any]:
-        if self.private_mode:
-            return self._serialize_health(None)
         with self.session() as session:
             return self._serialize_health(
                 session.get(_HealthStateData, 0),
@@ -1313,8 +1338,6 @@ class Data:
 
     @property
     def music_state(self) -> dict[str, Any]:
-        if self.private_mode:
-            return self._serialize_music(None)
         with self.session() as session:
             state = session.get(_MusicStateData, 0)
             meta = session.get(_MusicPlayerMetaData, 0)
@@ -1426,8 +1449,6 @@ class Data:
             self._main(session).last_updated = time()
 
     def music_audio_path(self, token: str) -> Path | None:
-        if self.private_mode:
-            return None
         with self.session() as session:
             state = session.get(_MusicStateData, 0)
             meta = session.get(_MusicPlayerMetaData, 0)

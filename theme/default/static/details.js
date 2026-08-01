@@ -215,7 +215,9 @@
     if (!devices.length) { const empty = document.createElement('p'); empty.className = 'details-empty'; empty.textContent = '还没有公开设备。启动客户端后会显示在这里。'; deviceList.append(empty); return; }
     devices.forEach((device) => {
       const row = document.createElement('article'); row.className = 'details-device-row'; const icon = document.createElement('span'); icon.className = 'details-device-icon'; icon.setAttribute('aria-hidden', 'true');
-      if (device.profile?.icon_key === 'bilibili') { const bilibiliIcon = document.createElement('span'); bilibiliIcon.className = 'bilibili-tv-icon'; icon.append(bilibiliIcon); } else icon.textContent = deviceIcons[device.profile?.icon_key] || deviceIcons.other;
+      if (device.profile?.icon_key === 'bilibili') { const bilibiliIcon = document.createElement('span'); bilibiliIcon.className = 'bilibili-tv-icon'; icon.append(bilibiliIcon); }
+      else if (device.profile?.icon_key === 'tablet') { const tabletIcon = document.createElement('span'); tabletIcon.className = 'tablet-device-icon'; icon.append(tabletIcon); }
+      else icon.textContent = deviceIcons[device.profile?.icon_key] || deviceIcons.other;
       const copy = document.createElement('div'); copy.className = 'details-device-copy'; const name = document.createElement('strong'); name.textContent = device.show_name || device.id;
       const app = document.createElement('span'); app.textContent = device.status || (device.public_state === 'offline' ? '等待设备重新上线' : '暂无活动'); copy.append(name, app);
       const state = document.createElement('div'); state.className = 'details-device-state'; const stateLine = document.createElement('span'); const dot = document.createElement('i'); dot.className = `is-${device.public_state}`; stateLine.append(dot, document.createTextNode(stateLabels[device.public_state] || '未知'));
