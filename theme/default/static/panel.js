@@ -275,7 +275,7 @@ function renderDeviceList() {
             desktop: '🖥️ 台式机',
             laptop: '💻 笔记本',
             phone: '📱 手机',
-            tablet: '▣ 平板',
+            tablet: '▯ 平板',
             watch: '⌚ 手表',
             server: '▤ 服务器',
             game: '🎮 游戏设备',

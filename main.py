@@ -526,12 +526,22 @@ def _safe_file(root: Path, relative: str) -> Path | None:
 
 
 @app.get("/favicon.ico", include_in_schema=False)
-def favicon():
+def favicon(request: Request):
     if FAVICON_PATH.is_file():
-        return FileResponse(FAVICON_PATH, media_type="image/x-icon")
+        return FileResponse(
+            FAVICON_PATH,
+            media_type="image/x-icon",
+            headers={
+                "Cache-Control": (
+                    "public, max-age=31536000, immutable"
+                    if request.query_params.get("v")
+                    else "no-cache"
+                )
+            },
+        )
     if c.page.favicon != "/favicon.ico":
         return RedirectResponse(c.page.favicon, status_code=302)
-    return _serve_public("favicon.ico")
+    return _serve_public("favicon.ico", immutable=bool(request.query_params.get("v")))
 
 
 def favicon_url() -> str:
@@ -1722,23 +1732,35 @@ POST_ONLY_PATHS = {
 }
 
 
-def _serve_public(path_name: str):
+def _serve_public(path_name: str, immutable: bool = False):
     for root in (Path(u.get_path("data/public", is_dir=True)), Path(u.get_path("public", is_dir=True))):
         file = _safe_file(root, path_name)
         if file:
-            return FileResponse(file, media_type=guess_type(path_name)[0])
+            return FileResponse(
+                file,
+                media_type=guess_type(path_name)[0],
+                headers={
+                    "Cache-Control": (
+                        "public, max-age=31536000, immutable" if immutable else "no-cache"
+                    )
+                },
+            )
     raise HTTPException(status_code=404)
 
 
 @app.get("/{path_name:path}", include_in_schema=False)
-def serve_public(path_name: str):
+def serve_public(request: Request, path_name: str):
     if f"/{path_name}" in POST_ONLY_PATHS:
         raise HTTPException(
             status_code=405,
             detail="This operation only accepts POST",
             headers={"Allow": "POST"},
         )
-    return _serve_public(path_name)
+    immutable_directories = ("app-icons/", "music-covers/", "music-player-icons/")
+    return _serve_public(
+        path_name,
+        immutable=bool(request.query_params.get("v")) or path_name.startswith(immutable_directories),
+    )
 
 
 if __name__ == "__main__":

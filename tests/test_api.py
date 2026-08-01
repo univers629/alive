@@ -459,6 +459,11 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert ".comment-wall__item--pinned" in danmaku_css
         assert "window.setInterval(replayDanmakuBatch, replayInterval * 1000)" in danmaku_js
 
+        footer = client.get("/").text
+        assert 'href="https://github.com/Alive-Project"' in footer
+        assert "img/alive-project-icon.png" in footer
+        assert 'loading="lazy" decoding="async"' in footer
+
         device_css = client.get("/static/device-cards.css").text
         assert ".health-overview__grid {" in device_css
         assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in device_css
@@ -895,6 +900,8 @@ def test_admin_favicon_upload_validates_and_writes_64px_ico(tmp_path, monkeypatc
         served = client.get("/favicon.ico")
         assert served.status_code == 200
         assert served.content == favicon_path.read_bytes()
+        assert served.headers["cache-control"] == "no-cache"
+        assert client.get("/favicon.ico?v=changed").headers["cache-control"] == "public, max-age=31536000, immutable"
 
         nonsquare = client.post(
             "/api/admin/favicon",

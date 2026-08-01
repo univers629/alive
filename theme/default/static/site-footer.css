@@ -44,6 +44,11 @@
 
 .site-footer__links {
   flex: none;
+  gap: 8px;
+}
+
+.site-footer__links .site-footer__project-icon {
+  border-radius: 5px;
 }
 
 .site-footer__links a {

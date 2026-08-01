@@ -143,6 +143,10 @@ function updateDeviceCard(card, device, index, timeout, now, deviceIcons) {
         if (!icon.querySelector('.bilibili-tv-icon')) {
             icon.replaceChildren(Object.assign(document.createElement('span'), { className: 'bilibili-tv-icon' }));
         }
+    } else if (iconKey === 'tablet') {
+        if (!icon.querySelector('.tablet-device-icon')) {
+            icon.replaceChildren(Object.assign(document.createElement('span'), { className: 'tablet-device-icon' }));
+        }
     } else {
         setTextIfChanged(icon, deviceIcons[iconKey] || deviceIcons.other);
     }
@@ -247,7 +251,7 @@ function updateDeviceStatus(data) {
         desktop: '🖥️',
         laptop: '💻',
         phone: '📱',
-        tablet: '▣',
+        tablet: '',
         watch: '⌚',
         server: '▤',
         game: '🎮',
