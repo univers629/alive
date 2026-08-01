@@ -592,6 +592,7 @@ def test_details_page_uses_real_metrics_and_sortable_device_snapshot():
         assert payload["activity"]["total_records"] >= 1
         assert payload["activity"]["categories"]["desktop"]["recent"][0]["app_name"] == "Visual Studio Code"
         assert payload["activity"]["categories"]["desktop"]["recent"][0]["app_icon_url"] == "/app-icons/code.png"
+        assert payload["activity"]["categories"]["desktop"]["recent"][0]["events"][0]["event_type"] == "app_open"
         assert payload["activity"]["categories"]["mobile"]["recent"][0]["app_name"] == "Mobile App"
         weekly = client.get("/api/details/query?period=weekly")
         assert weekly.status_code == 200

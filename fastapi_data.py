@@ -16,7 +16,7 @@ from typing import Any, Iterator
 
 import pytz
 import schedule
-from sqlalchemy import JSON, Boolean, Float, Integer, String, Text, create_engine, func, inspect, select, text
+from sqlalchemy import JSON, Boolean, Float, Integer, String, Text, create_engine, delete, func, inspect, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, scoped_session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -26,6 +26,7 @@ from models import ConfigModel, _StatusItemModel
 
 l = getLogger(__name__)
 LIMIT = 1024
+ACTIVITY_HISTORY_RETENTION_SECONDS = 183 * 24 * 60 * 60
 
 
 class Base(DeclarativeBase):
@@ -65,6 +66,20 @@ class _AppActivityData(Base):
     started_at: Mapped[float] = mapped_column(Float, nullable=False, default=time, index=True)
     ended_at: Mapped[float | None] = mapped_column(Float, nullable=True)
     last_seen_at: Mapped[float] = mapped_column(Float, nullable=False, default=time, index=True)
+
+
+class _AppActivityEventData(Base):
+    __tablename__ = "app_activity_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(LIMIT), nullable=False, index=True)
+    device_type: Mapped[str] = mapped_column(String(24), nullable=False, default="desktop", index=True)
+    app_key: Mapped[str] = mapped_column(String(240), nullable=False, default="", index=True)
+    app_name: Mapped[str] = mapped_column(String(240), nullable=False, default="")
+    app_icon_url: Mapped[str] = mapped_column(String(LIMIT), nullable=False, default="")
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False, default="app_open")
+    previous_app_name: Mapped[str] = mapped_column(String(240), nullable=False, default="")
+    created_at: Mapped[float] = mapped_column(Float, nullable=False, default=time, index=True)
 
 
 class _MetricsMetaData(Base):
@@ -239,6 +254,7 @@ class Data:
                 session.add(_MetricsMetaData(id=0))
             if session.scalar(select(_SiteSettingsData).limit(1)) is None:
                 session.add(_SiteSettingsData(id=0))
+        self.prune_activity_history()
 
     def _migrate_schema(self) -> None:
         """Apply small idempotent migrations for databases created by older releases."""
@@ -293,6 +309,7 @@ class Data:
             scheduler.every().day.at("00:00:00", self._c.main.timezone).do(self._metrics_refresh)
         if self._c.status.device_timeout > 0:
             scheduler.every(5).seconds.do(self._expire_devices)
+        scheduler.every().day.at("00:05:00", self._c.main.timezone).do(self.prune_activity_history)
         scheduler.every(max(self._c.main.cache_age, 1)).seconds.do(self._clean_cache)
         while True:
             scheduler.run_pending()
@@ -603,6 +620,7 @@ class Data:
                     device.fields = u.deep_merge_dict(device.fields or {}, fields)
                 device.last_updated = time()
             self._record_app_activity(session, id, bool(using), fields or {})
+            self._prune_activity_history_in_session(session)
             self._main(session).last_updated = time()
 
     @staticmethod
@@ -611,6 +629,29 @@ class Data:
         if ended_at is None:
             ended_at = min(now, activity.last_seen_at + grace)
         return max(0.0, ended_at - activity.started_at)
+
+    @staticmethod
+    def _record_activity_event(
+        session: Any,
+        device_id: str,
+        device_type: str,
+        app_key: str,
+        app_name: str,
+        app_icon_url: str,
+        event_type: str,
+        previous_app_name: str = "",
+    ) -> None:
+        session.add(
+            _AppActivityEventData(
+                device_id=device_id,
+                device_type=device_type,
+                app_key=app_key[:240],
+                app_name=app_name[:240],
+                app_icon_url=app_icon_url[:LIMIT],
+                event_type=event_type[:32],
+                previous_app_name=previous_app_name[:240],
+            )
+        )
 
     def _record_app_activity(self, session: Any, device_id: str, using: bool, fields: dict) -> None:
         """Close/open a foreground-app interval when a capable client reports it."""
@@ -627,11 +668,16 @@ class Data:
         app_name = str(fields.get("activity_app_name") or "").strip()[:240]
         app_icon_url = str(fields.get("activity_app_icon_url") or fields.get("app_icon_url") or "").strip()[:LIMIT]
         device_type = str(fields.get("activity_device_type") or "desktop").strip().lower()[:24]
+        reported_event = str(fields.get("activity_event") or "").strip().lower()[:32]
 
         if not using or not app_key:
             if current is not None:
                 current.ended_at = now
                 current.last_seen_at = now
+                self._record_activity_event(
+                    session, device_id, device_type, current.app_key, current.app_name,
+                    current.app_icon_url, reported_event or "inactive",
+                )
             return
 
         if current is not None and current.app_key == app_key:
@@ -641,11 +687,25 @@ class Data:
                 current.app_name = app_name
             if app_icon_url:
                 current.app_icon_url = app_icon_url
+            if reported_event:
+                self._record_activity_event(
+                    session, device_id, device_type, current.app_key, current.app_name,
+                    current.app_icon_url, reported_event,
+                )
             return
 
         if current is not None:
             current.ended_at = now
             current.last_seen_at = now
+            self._record_activity_event(
+                session, device_id, device_type, app_key, app_name or app_key, app_icon_url,
+                reported_event or "app_switch", current.app_name,
+            )
+        else:
+            self._record_activity_event(
+                session, device_id, device_type, app_key, app_name or app_key, app_icon_url,
+                reported_event or "app_open",
+            )
         session.add(
             _AppActivityData(
                 device_id=device_id,
@@ -662,6 +722,18 @@ class Data:
     @staticmethod
     def _activity_category(device_type: str) -> str:
         return "mobile" if device_type in {"mobile", "phone", "tablet", "watch"} else "desktop"
+
+    @staticmethod
+    def _prune_activity_history_in_session(session: Any, now: float | None = None) -> int:
+        cutoff = (now if now is not None else time()) - ACTIVITY_HISTORY_RETENTION_SECONDS
+        removed = session.execute(delete(_AppActivityData).where(_AppActivityData.last_seen_at < cutoff)).rowcount or 0
+        removed += session.execute(delete(_AppActivityEventData).where(_AppActivityEventData.created_at < cutoff)).rowcount or 0
+        return int(removed)
+
+    def prune_activity_history(self) -> int:
+        """Keep application usage and event history to a rolling six months."""
+        with self._write_lock, self.session() as session:
+            return self._prune_activity_history_in_session(session)
 
     def activity_snapshot(
         self,
@@ -702,6 +774,12 @@ class Data:
                 .where(_AppActivityData.started_at < range_end, _AppActivityData.last_seen_at >= range_start)
                 .order_by(_AppActivityData.last_seen_at.desc(), _AppActivityData.id.desc())
             ).all()
+            event_rows = session.scalars(
+                select(_AppActivityEventData)
+                .where(_AppActivityEventData.created_at >= range_start, _AppActivityEventData.created_at < range_end)
+                .order_by(_AppActivityEventData.created_at.desc(), _AppActivityEventData.id.desc())
+                .limit(300)
+            ).all()
             count_rows = session.execute(
                 select(_AppActivityData.device_type, func.count()).group_by(_AppActivityData.device_type)
             ).all()
@@ -714,8 +792,21 @@ class Data:
             for category in ("mobile", "desktop")
         }
         app_totals: dict[str, dict[str, dict[str, Any]]] = {"mobile": {}, "desktop": {}}
+        app_events: dict[str, dict[str, list[dict[str, Any]]]] = {"mobile": {}, "desktop": {}}
         for device_type, count in count_rows:
             categories[self._activity_category(device_type)]["total_records"] += int(count)
+        for event in event_rows:
+            category = self._activity_category(event.device_type)
+            if not event.app_key:
+                continue
+            events = app_events[category].setdefault(event.app_key, [])
+            if len(events) < 12:
+                events.append({
+                    "event_type": event.event_type,
+                    "app_name": event.app_name or event.app_key,
+                    "previous_app_name": event.previous_app_name,
+                    "timestamp": event.created_at,
+                })
 
         for row in rows:
             category = self._activity_category(row.device_type)
@@ -736,14 +827,21 @@ class Data:
                 "duration_seconds": round(overlap),
                 "active": active,
             }
-            if len(categories[category]["recent"]) < 30:
-                categories[category]["recent"].append(record)
             categories[category]["period_seconds"] += overlap
             item = app_totals[category].setdefault(
                 row.app_key,
-                {"app_name": record["app_name"], "app_icon_url": record["app_icon_url"], "duration_seconds": 0.0},
+                {
+                    "app_key": row.app_key,
+                    "app_name": record["app_name"],
+                    "app_icon_url": record["app_icon_url"],
+                    "duration_seconds": 0.0,
+                    "last_seen_at": effective_end,
+                    "active": active,
+                },
             )
             item["duration_seconds"] += overlap
+            item["last_seen_at"] = max(float(item["last_seen_at"]), effective_end)
+            item["active"] = bool(item["active"] or active)
             if record["app_icon_url"]:
                 item["app_icon_url"] = record["app_icon_url"]
 
@@ -767,9 +865,18 @@ class Data:
             data["period_seconds"] = round(data["period_seconds"])
             data["today_seconds"] = data["period_seconds"]
             data["time_series"] = [{**item, "seconds": round(item["seconds"])} for item in data["time_series"]]
+            apps = list(app_totals[category].values())
             data["top_apps"] = [
                 {**item, "duration_seconds": round(item["duration_seconds"])}
-                for item in sorted(app_totals[category].values(), key=lambda item: item["duration_seconds"], reverse=True)[:12]
+                for item in sorted(apps, key=lambda item: item["duration_seconds"], reverse=True)[:12]
+            ]
+            data["recent"] = [
+                {
+                    **item,
+                    "duration_seconds": round(item["duration_seconds"]),
+                    "events": app_events[category].get(item["app_key"], []),
+                }
+                for item in sorted(apps, key=lambda item: item["last_seen_at"], reverse=True)[:50]
             ]
         return {
             "period": period,

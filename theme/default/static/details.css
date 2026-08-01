@@ -184,6 +184,103 @@
   white-space: nowrap;
 }
 
+.details-date-picker {
+  position: relative;
+}
+
+.details-date-picker__trigger {
+  padding: 0;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.details-date-picker__trigger::after {
+  content: "⌄";
+  margin-left: 4px;
+  color: var(--alive-accent);
+}
+
+.details-date-picker__menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 236px;
+  padding: 11px;
+  color: var(--alive-ink);
+  border: 1px solid var(--alive-border);
+  border-radius: 16px;
+  background: var(--alive-panel);
+  box-shadow: var(--alive-shadow), inset 0 1px 0 rgba(255, 255, 255, .15);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.details-date-picker__head {
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr) 27px;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 9px;
+}
+
+.details-date-picker__head strong {
+  overflow: hidden;
+  font: 700 .7rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details-date-picker__head button {
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  color: var(--alive-muted);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font: 760 1rem/1 "Segoe UI Variable", sans-serif;
+}
+
+.details-date-picker__head button:hover {
+  background: var(--alive-border-soft);
+}
+
+.details-date-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.details-date-picker__grid button {
+  min-width: 0;
+  min-height: 31px;
+  padding: 0 4px;
+  color: var(--alive-muted);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--alive-surface-soft);
+  font: 630 .65rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  cursor: pointer;
+}
+
+.details-date-picker__grid button:hover:not(:disabled),
+.details-date-picker__grid button.is-selected {
+  color: #fff;
+  border-color: transparent;
+  background: var(--alive-accent);
+}
+
+.details-date-picker__grid button:disabled {
+  opacity: .32;
+  cursor: default;
+}
+
 .details-period-nav {
   display: grid;
   place-items: center;
@@ -213,6 +310,10 @@
   display: grid;
   gap: 9px;
   margin-top: 17px;
+  max-height: 650px;
+  padding-right: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .details-charts {
@@ -364,14 +465,54 @@
 }
 
 .details-activity-row {
+  overflow: hidden;
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 17px;
+  background: var(--alive-surface-soft);
+}
+
+.details-activity-summary {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
+  width: 100%;
   padding: 12px;
-  border: 1px solid var(--alive-border-soft);
-  border-radius: 17px;
-  background: var(--alive-surface-soft);
+  color: inherit;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.details-activity-summary:hover {
+  background: color-mix(in srgb, var(--alive-accent) 7%, transparent);
+}
+
+.details-activity-summary[aria-expanded="true"] {
+  border-bottom: 1px solid var(--alive-border-soft);
+}
+
+.details-activity-events {
+  display: grid;
+  gap: 7px;
+  padding: 10px 12px 12px 66px;
+  color: var(--alive-muted);
+  font: 540 .68rem/1.35 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.details-activity-events > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.details-activity-events time {
+  flex: none;
+  color: var(--alive-faint);
+  font-size: .61rem;
+  white-space: nowrap;
 }
 
 .details-activity-icon {
@@ -724,7 +865,7 @@
     grid-template-columns: 38px minmax(0, 1fr);
   }
 
-  .details-activity-row {
+  .details-activity-summary {
     grid-template-columns: 38px minmax(0, 1fr);
   }
 
@@ -746,6 +887,10 @@
   .details-activity-meta {
     grid-column: 2;
     justify-items: start;
+  }
+
+  .details-activity-events {
+    padding-left: 50px;
   }
 }
 

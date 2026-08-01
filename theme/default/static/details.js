@@ -7,6 +7,9 @@
   const donutLegend = document.getElementById('details-donut-legend');
   const usageBars = document.getElementById('details-usage-bars');
   const periodLabel = document.getElementById('details-activity-period-label');
+  const datePickerMenu = document.getElementById('details-date-picker-menu');
+  const datePickerGrid = document.getElementById('details-date-picker-grid');
+  const datePickerTitle = document.getElementById('details-date-picker-title');
   const activityTabs = [...document.querySelectorAll('[data-activity-category]')];
   const periodTabs = [...document.querySelectorAll('[data-activity-period]')];
   if (!sortSelect || !deviceList || !activityList || !appRanking || !donut || !usageBars) return;
@@ -18,6 +21,7 @@
   let selectedActivityCategory = 'mobile';
   let selectedPeriod = 'daily';
   let selectedDate = new Date();
+  let datePickerLevel = 'year';
 
   function setText(id, value) { const element = document.getElementById(id); if (element) element.textContent = String(value); }
   function relativeTime(timestamp) {
@@ -39,6 +43,37 @@
   function apiDate(date) {
     const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+  function earliestActivityDate() { const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - 183); return date; }
+  function isAvailableDate(date) { const today = new Date(); today.setHours(23, 59, 59, 999); return date >= earliestActivityDate() && date <= today; }
+  function monthName(month) { return `${month + 1} 月`; }
+  function closeDatePicker() { if (datePickerMenu) datePickerMenu.hidden = true; periodLabel?.setAttribute('aria-expanded', 'false'); }
+  function datePickerButton(label, disabled, onClick, selected = false) {
+    const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.disabled = disabled; button.className = selected ? 'is-selected' : '';
+    if (!disabled) button.addEventListener('click', onClick); return button;
+  }
+  function renderDatePicker() {
+    if (!datePickerGrid || !datePickerTitle) return;
+    datePickerGrid.replaceChildren(); const earliest = earliestActivityDate(); const today = new Date();
+    if (datePickerLevel === 'year') {
+      datePickerTitle.textContent = '选择年份';
+      for (let year = earliest.getFullYear(); year <= today.getFullYear(); year += 1) {
+        datePickerGrid.append(datePickerButton(`${year} 年`, false, () => { selectedDate.setFullYear(year); datePickerLevel = 'month'; renderDatePicker(); }, selectedDate.getFullYear() === year));
+      }
+    } else if (datePickerLevel === 'month') {
+      datePickerTitle.textContent = `${selectedDate.getFullYear()} 年 · 选择月份`;
+      for (let month = 0; month < 12; month += 1) {
+        const candidate = new Date(selectedDate.getFullYear(), month, 1); const end = new Date(selectedDate.getFullYear(), month + 1, 0, 23, 59, 59);
+        datePickerGrid.append(datePickerButton(monthName(month), end < earliest || candidate > today, () => { selectedDate.setMonth(month); datePickerLevel = 'day'; renderDatePicker(); }, selectedDate.getMonth() === month));
+      }
+    } else {
+      datePickerTitle.textContent = `${selectedDate.getFullYear()} 年 ${selectedDate.getMonth() + 1} 月 · 选择日期`;
+      const days = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
+      for (let day = 1; day <= days; day += 1) {
+        const candidate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
+        datePickerGrid.append(datePickerButton(String(day), !isAvailableDate(candidate), () => { selectedDate = candidate; closeDatePicker(); refresh(); }, selectedDate.getDate() === day));
+      }
+    }
   }
   function activityIcon(record, className = 'details-activity-icon') {
     const icon = document.createElement('span');
@@ -63,14 +98,34 @@
     }
     records.forEach((record) => {
       const row = document.createElement('article'); row.className = 'details-activity-row';
+      const summary = document.createElement('button'); summary.type = 'button'; summary.className = 'details-activity-summary'; summary.setAttribute('aria-expanded', 'false');
       const copy = document.createElement('div'); copy.className = 'details-activity-copy';
       const name = document.createElement('strong'); name.textContent = record.app_name || '未知应用';
-      const source = document.createElement('span'); source.textContent = record.device_type === 'mobile' ? '移动设备' : '电脑设备'; copy.append(name, source);
+      const source = document.createElement('span'); source.textContent = record.active ? '正在使用 · 点击查看最近事件' : '点击查看最近事件'; copy.append(name, source);
       const meta = document.createElement('div'); meta.className = 'details-activity-meta';
       const duration = document.createElement('strong'); duration.textContent = formatDuration(record.duration_seconds);
-      const when = document.createElement('time'); when.dateTime = new Date(Number(record.started_at) * 1000).toISOString();
-      when.textContent = record.active ? `使用中 · ${formatActivityTime(record.started_at)}` : formatActivityTime(record.started_at); meta.append(duration, when);
-      row.append(activityIcon(record), copy, meta); activityList.append(row);
+      const when = document.createElement('time'); when.dateTime = new Date(Number(record.last_seen_at) * 1000).toISOString();
+      when.textContent = record.active ? '使用中' : formatActivityTime(record.last_seen_at); meta.append(duration, when);
+      summary.append(activityIcon(record), copy, meta);
+      const events = document.createElement('div'); events.className = 'details-activity-events'; events.hidden = true;
+      const eventRows = Array.isArray(record.events) ? record.events : [];
+      if (!eventRows.length) {
+        const empty = document.createElement('span'); empty.textContent = '暂时没有切换或锁屏事件。'; events.append(empty);
+      } else eventRows.forEach((event) => {
+        const item = document.createElement('div'); const text = document.createElement('span'); const whenEvent = document.createElement('time');
+        const labels = {
+          app_switch: event.previous_app_name ? `从 ${event.previous_app_name} 切换到此应用` : '切换到此应用',
+          screen_locked: '屏幕已锁定', screen_unlocked: '屏幕已解锁', app_open: '打开此应用',
+          inactive: '离开此应用', device_offline: '设备已离线',
+        };
+        text.textContent = labels[event.event_type] || '应用状态已更新';
+        whenEvent.dateTime = new Date(Number(event.timestamp) * 1000).toISOString(); whenEvent.textContent = formatActivityTime(event.timestamp);
+        item.append(text, whenEvent); events.append(item);
+      });
+      summary.addEventListener('click', () => {
+        const expanded = summary.getAttribute('aria-expanded') === 'true'; summary.setAttribute('aria-expanded', String(!expanded)); events.hidden = expanded;
+      });
+      row.append(summary, events); activityList.append(row);
     });
   }
   function renderDonut(activity) {
@@ -162,5 +217,9 @@
   activityTabs.forEach((tab) => tab.addEventListener('click', () => { selectedActivityCategory = tab.dataset.activityCategory === 'desktop' ? 'desktop' : 'mobile'; if (payload) render(payload); }));
   periodTabs.forEach((tab) => tab.addEventListener('click', () => { selectedPeriod = tab.dataset.activityPeriod || 'daily'; refresh(); }));
   document.getElementById('details-period-prev')?.addEventListener('click', () => changePeriod(-1)); document.getElementById('details-period-next')?.addEventListener('click', () => changePeriod(1));
+  periodLabel?.addEventListener('click', () => { if (!datePickerMenu) return; datePickerLevel = 'year'; datePickerMenu.hidden = !datePickerMenu.hidden; periodLabel.setAttribute('aria-expanded', String(!datePickerMenu.hidden)); if (!datePickerMenu.hidden) renderDatePicker(); });
+  document.getElementById('details-date-picker-back')?.addEventListener('click', () => { if (datePickerLevel === 'day') datePickerLevel = 'month'; else if (datePickerLevel === 'month') datePickerLevel = 'year'; else closeDatePicker(); renderDatePicker(); });
+  document.getElementById('details-date-picker-close')?.addEventListener('click', closeDatePicker);
+  document.addEventListener('click', (event) => { if (datePickerMenu && !datePickerMenu.hidden && !event.target.closest('.details-date-picker')) closeDatePicker(); });
   refresh(); window.setInterval(() => { if (!document.hidden) refresh(); }, 10000);
 })();
