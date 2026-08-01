@@ -415,6 +415,9 @@ def index(request: Request):
         request,
         "comment_wall.html",
         danmaku_enabled=d.danmaku_enabled,
+        comment_display_limit=d.comment_display_limit,
+        danmaku_replay_count=d.danmaku_replay_count,
+        danmaku_replay_interval=d.danmaku_replay_interval,
     )
     site_chrome = render_template(request, "site_chrome.html", current_page="home")
     site_footer = render_template(request, "site_footer.html", alive_version=version_str)
@@ -831,11 +834,16 @@ def music_query():
     tags=["评论与弹幕 / Comments"],
     summary="读取最近的公开评论",
 )
-def comments_query(limit: int = 8):
+def comments_query(limit: int | None = None):
+    display_limit = d.comment_display_limit
+    requested_limit = display_limit if limit is None else limit
     return {
         "success": True,
         "danmaku_enabled": d.danmaku_enabled,
-        "comments": d.comment_list(min(max(limit, 1), 8)),
+        "comment_display_limit": display_limit,
+        "danmaku_replay_count": d.danmaku_replay_count,
+        "danmaku_replay_interval": d.danmaku_replay_interval,
+        "comments": d.comment_list(min(max(requested_limit, 1), display_limit)),
     }
 
 
@@ -1262,6 +1270,9 @@ def admin_snapshot():
         "settings": {
             "visit_display_mode": d.visit_display_mode,
             "danmaku_enabled": d.danmaku_enabled,
+            "comment_display_limit": d.comment_display_limit,
+            "danmaku_replay_count": d.danmaku_replay_count,
+            "danmaku_replay_interval": d.danmaku_replay_interval,
             "page_name": d.page_name,
             "page_title": d.page_title,
             "favicon": favicon_url(),
@@ -1292,6 +1303,19 @@ async def admin_settings(request: Request):
         if enabled is None:
             raise u.APIUnsuccessful(400, "danmaku_enabled must be boolean")
         d.set_runtime_setting("danmaku_enabled", "true" if enabled else "false")
+    for key, minimum, maximum in (
+        ("comment_display_limit", 1, 50),
+        ("danmaku_replay_count", 1, 10),
+        ("danmaku_replay_interval", 3, 300),
+    ):
+        if key in body:
+            try:
+                value = int(body[key])
+            except (TypeError, ValueError) as exc:
+                raise u.APIUnsuccessful(400, f"{key} must be an integer") from exc
+            if not minimum <= value <= maximum:
+                raise u.APIUnsuccessful(400, f"{key} must be between {minimum} and {maximum}")
+            d.set_runtime_setting(key, str(value))
     if "page_name" in body:
         page_name = _single_line_text(str(body["page_name"]))[:64]
         if not page_name:
@@ -1333,6 +1357,9 @@ async def admin_settings(request: Request):
         "settings": {
             "visit_display_mode": d.visit_display_mode,
             "danmaku_enabled": d.danmaku_enabled,
+            "comment_display_limit": d.comment_display_limit,
+            "danmaku_replay_count": d.danmaku_replay_count,
+            "danmaku_replay_interval": d.danmaku_replay_interval,
             "page_name": d.page_name,
             "page_title": d.page_title,
             "favicon": favicon_url(),

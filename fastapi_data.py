@@ -604,6 +604,9 @@ class Data:
     def set_runtime_setting(self, key: str, value: str) -> None:
         if key not in {
             "danmaku_enabled",
+            "comment_display_limit",
+            "danmaku_replay_count",
+            "danmaku_replay_interval",
             "page_name",
             "page_title",
             "social_links",
@@ -623,6 +626,25 @@ class Data:
     @property
     def danmaku_enabled(self) -> bool:
         return self.runtime_setting("danmaku_enabled", "true") == "true"
+
+    def _runtime_int(self, key: str, default: int, minimum: int, maximum: int) -> int:
+        try:
+            value = int(self.runtime_setting(key, str(default)))
+        except (TypeError, ValueError):
+            return default
+        return max(minimum, min(maximum, value))
+
+    @property
+    def comment_display_limit(self) -> int:
+        return self._runtime_int("comment_display_limit", 8, 1, 50)
+
+    @property
+    def danmaku_replay_count(self) -> int:
+        return self._runtime_int("danmaku_replay_count", 1, 1, 10)
+
+    @property
+    def danmaku_replay_interval(self) -> int:
+        return self._runtime_int("danmaku_replay_interval", 30, 3, 300)
 
     @property
     def page_name(self) -> str:
@@ -683,16 +705,17 @@ class Data:
         limit = max(1, min(int(limit), 300))
         with self.session() as session:
             pinned = list(session.scalars(
-                select(_CommentData).where(_CommentData.is_pinned.is_(True)).order_by(_CommentData.id.desc())
+                select(_CommentData).where(_CommentData.is_pinned.is_(True))
+                .order_by(_CommentData.id.desc()).limit(limit)
             ).all())
-            selected = {comment.id: comment for comment in pinned[:limit]}
-            if len(selected) < limit:
+            if len(pinned) < limit:
                 recent = session.scalars(
                     select(_CommentData).where(_CommentData.is_pinned.is_(False))
-                    .order_by(_CommentData.id.desc()).limit(limit - len(selected))
+                    .order_by(_CommentData.id.desc()).limit(limit - len(pinned))
                 ).all()
-                selected.update({comment.id: comment for comment in recent})
-        return [self._serialize_comment(comment) for comment in sorted(selected.values(), key=lambda item: item.id)]
+            else:
+                recent = []
+        return [self._serialize_comment(comment) for comment in [*pinned, *recent]]
 
     def comment_admin_list(self) -> list[dict[str, Any]]:
         with self.session() as session:

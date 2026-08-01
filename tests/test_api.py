@@ -453,11 +453,11 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert "scrollbar-color:" in danmaku_css
 
         danmaku_js = client.get("/static/comment-wall.js").text
-        assert "MAX_COMMENTS = 8" in danmaku_js
-        assert "REPLAY_INTERVAL = 30000" in danmaku_js
-        assert ".slice(-MAX_COMMENTS)" in danmaku_js
-        assert "selected.length < 2" not in danmaku_js
-        assert "window.setInterval(replayRandomDanmaku, REPLAY_INTERVAL)" in danmaku_js
+        assert "commentDisplayLimit = Number(root.dataset.displayLimit) || 8" in danmaku_js
+        assert "replayInterval = Number(root.dataset.replayInterval) || 30" in danmaku_js
+        assert "function replayDanmakuBatch()" in danmaku_js
+        assert ".comment-wall__item--pinned" in danmaku_css
+        assert "window.setInterval(replayDanmakuBatch, replayInterval * 1000)" in danmaku_js
 
         device_css = client.get("/static/device-cards.css").text
         assert ".health-overview__grid {" in device_css
@@ -597,6 +597,9 @@ def test_admin_comment_flags_reorder_and_panel_controls():
         assert updated.status_code == 200
         assert updated.json()["comment"]["favorite"] is True
         assert updated.json()["comment"]["pinned"] is True
+        public_comments = client.get("/api/comments/query").json()["comments"]
+        assert public_comments[0]["id"] == comment_id
+        assert public_comments[0]["pinned"] is True
         assert client.get("/api/admin/comments/update").status_code == 405
         assert client.post(
             "/api/admin/comments/update",
@@ -660,6 +663,9 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
             json={
                 "visit_display_mode": "monthly",
                 "danmaku_enabled": False,
+                "comment_display_limit": 12,
+                "danmaku_replay_count": 3,
+                "danmaku_replay_interval": 45,
                 "page_name": "Codex",
                 "page_title": "Codex Status",
                 "social_links": [
@@ -674,6 +680,9 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert settings.status_code == 200
         assert settings.json()["visit_metric"]["mode"] == "monthly"
         assert settings.json()["settings"]["danmaku_enabled"] is False
+        assert settings.json()["settings"]["comment_display_limit"] == 12
+        assert settings.json()["settings"]["danmaku_replay_count"] == 3
+        assert settings.json()["settings"]["danmaku_replay_interval"] == 45
         assert settings.json()["settings"]["page_name"] == "Codex"
         assert settings.json()["settings"]["page_title"] == "Codex Status"
         assert settings.json()["settings"]["social_links"][0]["platform"] == "github"
@@ -690,6 +699,9 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert "<title>Codex Status - 登录</title>" in client.get("/panel/login").text
         client.post("/panel/auth", json={"secret": "test-secret-1234"})
         assert client.get("/api/comments/query").json()["danmaku_enabled"] is False
+        comment_settings = client.get("/api/comments/query", params={"limit": 50}).json()
+        assert comment_settings["comment_display_limit"] == 12
+        assert len(comment_settings["comments"]) <= 12
         status_list = client.get("/api/status/list").json()["status_list"]
         assert status_list[0]["desc"] == "现在可以联系我。"
         assert status_list[1]["desc"] == "现在暂时无法联系。"
@@ -742,6 +754,9 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
             json={
                 "visit_display_mode": "total",
                 "danmaku_enabled": True,
+                "comment_display_limit": 8,
+                "danmaku_replay_count": 1,
+                "danmaku_replay_interval": 30,
                 "page_name": main.c.page.name,
                 "social_links": [],
                 "music_library": main.c.main.music_library,

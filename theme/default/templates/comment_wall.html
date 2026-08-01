@@ -1,7 +1,10 @@
 <div class="comment-wall__stage" id="danmaku-stage" aria-hidden="true"></div>
 
 <section class="comment-wall" id="comment-wall" aria-labelledby="comment-wall-title"
-    data-server-enabled="{{ 'true' if danmaku_enabled else 'false' }}">
+    data-server-enabled="{{ 'true' if danmaku_enabled else 'false' }}"
+    data-display-limit="{{ comment_display_limit }}"
+    data-replay-count="{{ danmaku_replay_count }}"
+    data-replay-interval="{{ danmaku_replay_interval }}">
     <div class="comment-wall__header">
         <div>
             <span class="comment-wall__eyebrow">LEAVE A TRACE</span>

@@ -7,6 +7,9 @@ let privateMode = false;
 let displaySettings = {
     visit_display_mode: 'total',
     danmaku_enabled: true,
+    comment_display_limit: 8,
+    danmaku_replay_count: 1,
+    danmaku_replay_interval: 30,
     page_name: 'Alive',
     page_title: 'Alive',
     music_library: '/alive/music-library',
@@ -81,6 +84,12 @@ async function initPage() {
         if (pageTitle) pageTitle.value = displaySettings.page_title || 'Alive';
         const danmakuEnabled = document.getElementById('danmaku-enabled');
         if (danmakuEnabled) danmakuEnabled.checked = displaySettings.danmaku_enabled !== false;
+        const commentDisplayLimit = document.getElementById('comment-display-limit');
+        if (commentDisplayLimit) commentDisplayLimit.value = displaySettings.comment_display_limit || 8;
+        const danmakuReplayCount = document.getElementById('danmaku-replay-count');
+        if (danmakuReplayCount) danmakuReplayCount.value = displaySettings.danmaku_replay_count || 1;
+        const danmakuReplayInterval = document.getElementById('danmaku-replay-interval');
+        if (danmakuReplayInterval) danmakuReplayInterval.value = displaySettings.danmaku_replay_interval || 30;
         const musicLibrary = document.getElementById('music-library');
         if (musicLibrary) musicLibrary.value = displaySettings.music_library || '/alive/music-library';
         renderSocialLinksEditor(displaySettings.social_links || []);
@@ -434,7 +443,6 @@ async function saveDisplaySettings() {
     try {
         const response = await postJSON('/api/admin/settings', {
             visit_display_mode: select.value,
-            danmaku_enabled: document.getElementById('danmaku-enabled').checked,
             page_name: document.getElementById('page-name').value.trim(),
             page_title: document.getElementById('page-title').value.trim(),
             music_library: document.getElementById('music-library').value.trim()
@@ -444,10 +452,34 @@ async function saveDisplaySettings() {
             throw new Error(data.message || data.details || '保存失败');
         }
         displaySettings = data.settings;
-        alert('主页展示、弹幕与音乐目录已保存。');
+        alert('主页展示与音乐目录已保存。');
     } catch (error) {
         console.error('保存展示设置失败:', error);
         alert(`保存展示设置失败：${error.message || error}`);
+    }
+}
+
+async function saveCommentDisplaySettings() {
+    const values = {
+        danmaku_enabled: document.getElementById('danmaku-enabled')?.checked,
+        comment_display_limit: Number(document.getElementById('comment-display-limit')?.value),
+        danmaku_replay_count: Number(document.getElementById('danmaku-replay-count')?.value),
+        danmaku_replay_interval: Number(document.getElementById('danmaku-replay-interval')?.value),
+    };
+    if (!Number.isInteger(values.comment_display_limit) || values.comment_display_limit < 1 || values.comment_display_limit > 50
+        || !Number.isInteger(values.danmaku_replay_count) || values.danmaku_replay_count < 1 || values.danmaku_replay_count > 10
+        || !Number.isInteger(values.danmaku_replay_interval) || values.danmaku_replay_interval < 3 || values.danmaku_replay_interval > 300) {
+        alert('请填写有效范围：主页评论 1–50 条、每轮弹幕 1–10 条、播放间隔 3–300 秒。');
+        return;
+    }
+    try {
+        const response = await postJSON('/api/admin/settings', values);
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || data.details || '保存失败');
+        displaySettings = data.settings;
+        alert('评论和弹幕展示设置已保存。');
+    } catch (error) {
+        alert(`保存评论展示设置失败：${error.message || error}`);
     }
 }
 
@@ -765,6 +797,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const saveStatusDescriptionsBtn = document.getElementById('save-status-descriptions-btn');
     if (saveStatusDescriptionsBtn) {
         saveStatusDescriptionsBtn.addEventListener('click', saveStatusDescriptions);
+    }
+    const saveCommentDisplaySettingsBtn = document.getElementById('save-comment-display-settings-btn');
+    if (saveCommentDisplaySettingsBtn) {
+        saveCommentDisplaySettingsBtn.addEventListener('click', saveCommentDisplaySettings);
     }
     const saveSecretBtn = document.getElementById('save-secret-btn');
     if (saveSecretBtn) {
