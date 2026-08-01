@@ -246,14 +246,13 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 14px;
+  border-radius: inherit;
 }
 
 .music-island.has-player-icon .music-island__app {
   background: none;
   box-shadow: none;
   border-color: transparent;
-  overflow: hidden;
 }
 
 .music-island.has-player-icon .music-island__app-glyph {

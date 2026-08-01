@@ -117,16 +117,23 @@
         elements.cover.alt = coverUrl && state ? `${state.title} 的封面` : '';
     }
 
-    function setPlayerIcon(iconKey, reportedName, iconUrl) {
+    function setPlayerIcon(iconKey, reportedName, iconUrl, sourceMode) {
         const safeKey = Object.hasOwn(PLAYER_ICONS, iconKey) ? iconKey : 'media-player';
         const icon = PLAYER_ICONS[safeKey];
         const label = String(reportedName || icon.label);
         root.dataset.player = safeKey;
         const uploadedUrl = String(iconUrl || '');
-        root.classList.toggle('has-player-icon', Boolean(uploadedUrl));
+        // The bundled NetEase icon is only used on the netease-api chain (a
+        // song ID was resolved). Local-upload and metadata-only chains keep
+        // the default glyph even when the reporting player is NetEase.
+        const bundledUrl = safeKey === 'cloudmusic' && sourceMode === 'netease-api'
+            ? root.dataset.neteaseIcon || ''
+            : '';
+        const shownUrl = uploadedUrl || bundledUrl;
+        root.classList.toggle('has-player-icon', Boolean(shownUrl));
         elements.appGlyph.textContent = icon.glyph;
-        elements.appIcon.src = uploadedUrl;
-        elements.appIcon.hidden = !uploadedUrl;
+        elements.appIcon.src = shownUrl;
+        elements.appIcon.hidden = !shownUrl;
         elements.appIcon.alt = label;
         elements.app.title = label;
         elements.app.setAttribute('aria-label', `音乐应用：${label}`);
@@ -196,7 +203,7 @@
         elements.title.textContent = state.title || '未知歌曲';
         elements.artist.textContent = state.artist || '未知艺术家';
         setCover(state.cover_url);
-        setPlayerIcon(state.player_icon, state.player_name, state.player_icon_url);
+        setPlayerIcon(state.player_icon, state.player_name, state.player_icon_url, state.source_mode);
 
         if (nextSong !== previousSong || String(state.audio_url || '') !== loadedAudioUrl) {
             loadAudio(state.audio_url);
