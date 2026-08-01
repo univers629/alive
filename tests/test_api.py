@@ -468,6 +468,9 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert ".health-overview__grid {" in device_css
         assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in device_css
         assert ".steps-card__ring {" in device_css
+        assert ".tablet-device-icon {" in device_css
+        assert "width: 25px;" in device_css
+        assert "height: 17px;" in device_css
 
         select_css = client.get("/static/glass-select.css").text
         assert "border-radius: 999px;" in select_css

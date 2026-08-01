@@ -347,8 +347,8 @@
 
 .tablet-device-icon {
   position: relative;
-  width: 17px;
-  height: 23px;
+  width: 25px;
+  height: 17px;
   display: block;
   border: 2px solid currentColor;
   border-radius: 4px;
@@ -357,25 +357,26 @@
 .tablet-device-icon::before {
   content: "";
   position: absolute;
-  top: 2px;
-  right: 2px;
-  bottom: 4px;
-  left: 2px;
+  inset: 3px 4px;
   border-radius: 1px;
-  background: currentColor;
-  opacity: .18;
+  background:
+    linear-gradient(currentColor, currentColor) 3px 3px / 6px 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 3px 7px / 12px 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 3px 11px / 9px 1px no-repeat,
+    linear-gradient(currentColor, currentColor) 100% 3px / 3px 9px no-repeat,
+    color-mix(in srgb, currentColor 16%, transparent);
 }
 
 .tablet-device-icon::after {
   content: "";
   position: absolute;
-  bottom: 1px;
-  left: 50%;
+  top: 50%;
+  left: 1px;
   width: 3px;
   height: 3px;
   border-radius: 50%;
   background: currentColor;
-  transform: translateX(-50%);
+  transform: translateY(-50%);
 }
 
 .device-card__name {
