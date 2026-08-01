@@ -150,6 +150,28 @@ def test_post_only_mutations_and_public_reads():
         assert query["device"]["desktop"]["fields"]["memory_gb"] == 32
         assert query["device"]["shared-secret-phone"]["status"] == "Phone"
 
+        # Legacy clients may omit the fields object entirely, or only send the
+        # original battery/network payload. Activity tracking is opt-in.
+        legacy = client.post(
+            "/api/device/set",
+            headers=headers,
+            json={"id": "legacy-client", "show_name": "Legacy Client", "using": True, "status": "Browser"},
+        )
+        assert legacy.status_code == 200
+        legacy_fields = client.post(
+            "/api/device/set",
+            headers=headers,
+            json={
+                "id": "legacy-fields-client",
+                "show_name": "Legacy Fields Client",
+                "using": True,
+                "status": "Phone",
+                "fields": {"battery": 80, "network_type": "Wi-Fi"},
+            },
+        )
+        assert legacy_fields.status_code == 200
+        assert client.get("/api/details/query").json()["activity"]["total_records"] == 0
+
         private = client.post(
             "/api/device/private",
             headers=headers,
