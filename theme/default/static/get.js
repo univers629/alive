@@ -179,13 +179,27 @@ function updateDeviceCard(card, device, index, timeout, now, deviceIcons) {
     const battery = Number(batteryRaw);
     const network = fields.network_type || fields.network || fields.connection_type || '';
     const platform = fields.platform || fields.os || '';
+    const cpuCoresRaw = fields.cpu_cores ?? fields.processor_count;
+    const memoryGbRaw = fields.memory_gb ?? fields.memory_total_gb;
+    const cpuCores = cpuCoresRaw === null || cpuCoresRaw === undefined || cpuCoresRaw === '' ? Number.NaN : Number(cpuCoresRaw);
+    const memoryGb = memoryGbRaw === null || memoryGbRaw === undefined || memoryGbRaw === '' ? Number.NaN : Number(memoryGbRaw);
+    const isDesktop = fields.device_type === 'desktop'
+        || Number.isFinite(cpuCores)
+        || Number.isFinite(memoryGb)
+        || /^Windows\s+(?:10|11)\b/i.test(String(platform));
     const chips = [];
-    if (Number.isFinite(battery)) {
-        chips.push(`🔋 ${Math.max(0, Math.min(100, Math.round(battery)))}%${fields.charging ? ' · 充电中' : ''}`);
+    if (isDesktop) {
+        if (platform) chips.push(String(platform));
+        if (Number.isFinite(cpuCores) && cpuCores > 0) chips.push(`${Math.round(cpuCores)} 核`);
+        if (Number.isFinite(memoryGb) && memoryGb > 0) chips.push(`${Math.round(memoryGb)} GB 内存`);
+    } else {
+        if (Number.isFinite(battery)) {
+            chips.push(`🔋 ${Math.max(0, Math.min(100, Math.round(battery)))}%${fields.charging ? ' · 充电中' : ''}`);
+        }
+        if (network) chips.push(`◉ ${String(network)}`);
+        if (platform) chips.push(String(platform));
     }
-    if (network) chips.push(`◉ ${String(network)}`);
-    if (platform) chips.push(String(platform));
-    if (!chips.length) chips.push(state === 'offline' ? '等待设备重新上线' : '状态实时同步中');
+    if (!chips.length && !isDesktop) chips.push(state === 'offline' ? '等待设备重新上线' : '状态实时同步中');
 
     const meta = card.querySelector('.device-card__meta');
     chips.forEach((chip, chipIndex) => {

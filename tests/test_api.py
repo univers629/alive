@@ -122,7 +122,12 @@ def test_post_only_mutations_and_public_reads():
                 "show_name": "Desktop",
                 "using": True,
                 "status": "Editor",
-                "fields": {"battery": 80},
+                "fields": {
+                    "device_type": "desktop",
+                    "platform": "Windows 11",
+                    "cpu_cores": 16,
+                    "memory_gb": 32,
+                },
             },
         )
         assert created.status_code == 200
@@ -140,7 +145,9 @@ def test_post_only_mutations_and_public_reads():
 
         query = client.get("/api/status/query").json()
         assert query["device"]["desktop"]["status"] == "Editor"
-        assert query["device"]["desktop"]["fields"]["battery"] == 80
+        assert query["device"]["desktop"]["fields"]["platform"] == "Windows 11"
+        assert query["device"]["desktop"]["fields"]["cpu_cores"] == 16
+        assert query["device"]["desktop"]["fields"]["memory_gb"] == 32
         assert query["device"]["shared-secret-phone"]["status"] == "Phone"
 
         private = client.post(
@@ -397,6 +404,10 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert "?v=1.0.0?v=" not in home.text
         assert 'class="health-overview__grid"' in home.text
         assert "身体状态" in home.text
+
+        device_script = client.get("/static/get.js").text
+        assert "cpu_cores" in device_script
+        assert "GB 内存" in device_script
         assert "心率" in home.text
         assert "今日步数" in home.text
         assert "随身手机" not in home.text
