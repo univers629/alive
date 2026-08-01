@@ -30,6 +30,9 @@
    ```bash
    sudo docker compose up -d --build
    ```
+3. 准备网页：
+
+   配置反向代理与域名等
 
 ## 致谢
 
