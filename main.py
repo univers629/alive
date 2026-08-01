@@ -616,11 +616,13 @@ def metrics():
 def query_response(include_meta: bool = False, include_metrics: bool = False) -> dict:
     status_id = d.status_id
     _, status = d.get_status(status_id)
+    devices = d.device_list
     result = {
         "success": True,
         "time": datetime.now().timestamp(),
         "status": status.model_dump(),
-        "device": d.device_list,
+        "device": devices,
+        "device_order": list(devices),
         "health": d.health_state,
         "health_section_enabled": d.health_section_enabled,
         "music": d.music_state,
@@ -1265,11 +1267,13 @@ async def device_private_mode(request: Request):
 def admin_snapshot():
     status_id = d.status_id
     _, status = d.get_status(status_id)
+    devices = d.admin_device_list
     return {
         "success": True,
         "status": status.model_dump(),
         "private_mode": d.private_mode,
-        "devices": d.admin_device_list,
+        "devices": devices,
+        "device_order": list(devices),
         "settings": {
             "visit_display_mode": d.visit_display_mode,
             "danmaku_enabled": d.danmaku_enabled,
@@ -1551,7 +1555,8 @@ async def admin_device_reorder(request: Request):
         raise u.APIUnsuccessful(400, "device id must be a non-empty string")
     if direction not in {"up", "down"}:
         raise u.APIUnsuccessful(400, "direction must be up or down")
-    return {"success": True, "devices": d.device_reorder(device_id, direction)}
+    devices = d.device_reorder(device_id, direction)
+    return {"success": True, "devices": devices, "device_order": list(devices)}
 
 
 @app.post(

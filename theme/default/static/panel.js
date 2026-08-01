@@ -2,6 +2,7 @@
 let statusList = [];
 let currentStatus = { 'color': 'sleeping', 'desc': '', 'id': -1, 'name': '未知' };
 let deviceData = {};
+let deviceOrder = [];
 let commentsData = [];
 let privateMode = false;
 let panelLoadSequence = 0;
@@ -82,6 +83,7 @@ async function initPage() {
         statusList = statusListResp.status_list;
         currentStatus = queryData.status;
         deviceData = queryData.devices;
+        deviceOrder = Array.isArray(queryData.device_order) ? queryData.device_order : Object.keys(deviceData);
         commentsData = queryData.comments || [];
         privateMode = queryData.private_mode || false;
         displaySettings = queryData.settings || displaySettings;
@@ -239,7 +241,12 @@ function renderDeviceList() {
         return;
     }
 
-    for (const [deviceId, device] of Object.entries(deviceData)) {
+    const orderedIds = deviceOrder.filter((deviceId) => deviceData[deviceId]);
+    Object.keys(deviceData).forEach((deviceId) => {
+        if (!orderedIds.includes(deviceId)) orderedIds.push(deviceId);
+    });
+    for (const deviceId of orderedIds) {
+        const device = deviceData[deviceId];
         const tr = document.createElement('tr');
 
         const profile = device.profile || {};
@@ -298,8 +305,8 @@ function renderDeviceList() {
         const tdAction = document.createElement('td');
         const actionGroup = document.createElement('div');
         actionGroup.className = 'device-action-group';
-        const position = Object.keys(deviceData).indexOf(deviceId);
-        [['up', '↑', '向上移动', position === 0], ['down', '↓', '向下移动', position === Object.keys(deviceData).length - 1]].forEach(([direction, symbol, label, disabled]) => {
+        const position = orderedIds.indexOf(deviceId);
+        [['up', '↑', '向上移动', position === 0], ['down', '↓', '向下移动', position === orderedIds.length - 1]].forEach(([direction, symbol, label, disabled]) => {
             const moveButton = document.createElement('button');
             moveButton.className = 'icon-btn';
             moveButton.type = 'button';
@@ -341,6 +348,7 @@ async function reorderDevice(deviceId, direction) {
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || '排序失败');
         deviceData = data.devices || {};
+        deviceOrder = Array.isArray(data.device_order) ? data.device_order : Object.keys(deviceData);
         renderDeviceList();
     } catch (error) {
         alert(`设备排序失败：${error.message || error}`);

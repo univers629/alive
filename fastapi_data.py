@@ -502,19 +502,42 @@ class Data:
             for device in devices:
                 profile = session.get(_DeviceProfileData, device.id)
                 if profile is None:
-                    profile = _DeviceProfileData(id=device.id, sort_order=0)
+                    profile = _DeviceProfileData(
+                        id=device.id,
+                        display_name="",
+                        icon_key="desktop",
+                        sort_order=0,
+                        is_public=True,
+                    )
                     session.add(profile)
                 profiles[device.id] = profile
             ordered = sorted(
                 devices,
-                key=lambda device: (profiles[device.id].sort_order, device.show_name.casefold(), device.id),
+                key=lambda device: (
+                    profiles[device.id].sort_order,
+                    (profiles[device.id].display_name or device.show_name).casefold(),
+                    device.id,
+                ),
             )
-            index = next(index for index, device in enumerate(ordered) if device.id == id)
-            other_index = index - 1 if direction == "up" else index + 1
-            if 0 <= other_index < len(ordered):
-                ordered[index], ordered[other_index] = ordered[other_index], ordered[index]
+            # Normalize legacy duplicate order values before moving.  More importantly,
+            # move a device relative to the next device with the same visibility.  A
+            # hidden device between two public devices must not make the homepage look
+            # as though a public-device reorder had no effect.
             for sort_order, device in enumerate(ordered):
                 profiles[device.id].sort_order = sort_order
+            target = next(device for device in ordered if device.id == id)
+            visibility_group = [
+                device for device in ordered
+                if profiles[device.id].is_public == profiles[target.id].is_public
+            ]
+            index = next(index for index, device in enumerate(visibility_group) if device.id == id)
+            other_index = index - 1 if direction == "up" else index + 1
+            if 0 <= other_index < len(visibility_group):
+                other = visibility_group[other_index]
+                profiles[target.id].sort_order, profiles[other.id].sort_order = (
+                    profiles[other.id].sort_order,
+                    profiles[target.id].sort_order,
+                )
             self._main(session).last_updated = time()
         return self.admin_device_list
 

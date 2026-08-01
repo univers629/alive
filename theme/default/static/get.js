@@ -228,7 +228,20 @@ function updateDeviceStatus(data) {
     updateHealthStatus(data.health);
 
     // 更新设备状态
-    const devices = Object.values(data.device);
+    const deviceMap = data.device || {};
+    const orderedIds = Array.isArray(data.device_order) ? data.device_order : Object.keys(deviceMap);
+    const knownIds = new Set();
+    const devices = orderedIds
+        .map((id) => {
+            const device = deviceMap[id];
+            if (device) knownIds.add(String(id));
+            return device;
+        })
+        .filter(Boolean);
+    // Keep the page resilient to a partial response while respecting explicit order.
+    Object.entries(deviceMap).forEach(([id, device]) => {
+        if (!knownIds.has(String(id))) devices.push(device);
+    });
     const deviceStatusElement = document.getElementById('device-status');
     const deviceIcons = {
         desktop: '🖥️',

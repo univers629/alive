@@ -619,8 +619,35 @@ def test_admin_comment_flags_reorder_and_panel_controls():
         )
         assert moved.status_code == 200
         after = list(moved.json()["devices"])
+        assert moved.json()["device_order"] == after
         assert after.index("reorder-b") == before.index("reorder-a")
         assert after.index("reorder-a") == before.index("reorder-b")
+        homepage_order = list(client.get("/api/status/query").json()["device"])
+        assert homepage_order.index("reorder-b") < homepage_order.index("reorder-a")
+        homepage_payload = client.get("/api/status/query").json()
+        assert homepage_payload["device_order"] == list(homepage_payload["device"])
+
+        client.post("/api/device/set", headers=headers, json={"id": "visible-top", "show_name": "Visible Top"})
+        client.post("/api/device/set", headers=headers, json={"id": "hidden-middle", "show_name": "Hidden Middle"})
+        client.post("/api/device/set", headers=headers, json={"id": "visible-bottom", "show_name": "Visible Bottom"})
+        for device_id, sort_order, is_public in (
+            ("visible-top", 20_000, True),
+            ("hidden-middle", 20_001, False),
+            ("visible-bottom", 20_002, True),
+        ):
+            client.post(
+                "/api/admin/device/profile",
+                headers=headers,
+                json={"id": device_id, "display_name": device_id, "icon_key": "desktop", "sort_order": sort_order, "public": is_public},
+            )
+        moved_public = client.post(
+            "/api/admin/device/reorder",
+            headers=headers,
+            json={"id": "visible-top", "direction": "down"},
+        )
+        assert moved_public.status_code == 200
+        homepage_order = list(client.get("/api/status/query").json()["device"])
+        assert homepage_order.index("visible-bottom") < homepage_order.index("visible-top")
         assert client.post(
             "/api/admin/device/reorder",
             headers=headers,
