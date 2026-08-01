@@ -48,6 +48,14 @@
   function earliestActivityDate() { const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - 183); return date; }
   function isAvailableDate(date) { const today = new Date(); today.setHours(23, 59, 59, 999); return date >= earliestActivityDate() && date <= today; }
   function monthName(month) { return `${month + 1} 月`; }
+  function activityEventLabel(event) {
+    const labels = {
+      app_switch: event?.previous_app_name ? `从 ${event.previous_app_name} 切换到此应用` : '切换到此应用',
+      screen_locked: '屏幕已锁定', screen_unlocked: '屏幕已解锁', app_open: '打开此应用',
+      inactive: '离开此应用', device_offline: '设备已离线',
+    };
+    return labels[event?.event_type] || '应用状态已更新';
+  }
   function closeDatePicker() { if (datePickerMenu) datePickerMenu.hidden = true; datePickerTrigger?.setAttribute('aria-expanded', 'false'); }
   function datePickerButton(label, disabled, onClick, selected = false) {
     const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.disabled = disabled; button.className = selected ? 'is-selected' : '';
@@ -112,29 +120,44 @@
       const summary = document.createElement('button'); summary.type = 'button'; summary.className = 'details-activity-summary'; summary.setAttribute('aria-expanded', 'false');
       const copy = document.createElement('div'); copy.className = 'details-activity-copy';
       const name = document.createElement('strong'); name.textContent = record.app_name || '未知应用';
-      const source = document.createElement('span'); source.textContent = record.active ? '正在使用 · 点击查看最近事件' : '点击查看最近事件'; copy.append(name, source);
+      const latestEvent = record.latest_event;
+      const source = document.createElement('span');
+      source.textContent = latestEvent ? `最后一次：${activityEventLabel(latestEvent)}` : (record.active ? '正在使用' : '最后一次使用');
+      copy.append(name, source);
       const meta = document.createElement('div'); meta.className = 'details-activity-meta';
       const duration = document.createElement('strong'); duration.textContent = formatDuration(record.duration_seconds);
       const when = document.createElement('time'); when.dateTime = new Date(Number(record.last_seen_at) * 1000).toISOString();
       when.textContent = record.active ? '使用中' : formatActivityTime(record.last_seen_at); meta.append(duration, when);
       summary.append(activityIcon(record), copy, meta);
       const events = document.createElement('div'); events.className = 'details-activity-events'; events.hidden = true;
-      const eventRows = Array.isArray(record.events) ? record.events : [];
-      if (!eventRows.length) {
-        const empty = document.createElement('span'); empty.textContent = '暂时没有切换或锁屏事件。'; events.append(empty);
-      } else eventRows.forEach((event) => {
-        const item = document.createElement('div'); const text = document.createElement('span'); const whenEvent = document.createElement('time');
-        const labels = {
-          app_switch: event.previous_app_name ? `从 ${event.previous_app_name} 切换到此应用` : '切换到此应用',
-          screen_locked: '屏幕已锁定', screen_unlocked: '屏幕已解锁', app_open: '打开此应用',
-          inactive: '离开此应用', device_offline: '设备已离线',
-        };
-        text.textContent = labels[event.event_type] || '应用状态已更新';
-        whenEvent.dateTime = new Date(Number(event.timestamp) * 1000).toISOString(); whenEvent.textContent = formatActivityTime(event.timestamp);
-        item.append(text, whenEvent); events.append(item);
-      });
+      const renderEventRows = (eventRows) => {
+        events.replaceChildren();
+        if (!eventRows.length) {
+          const empty = document.createElement('span'); empty.textContent = '这一天没有额外的切换或锁屏事件。'; events.append(empty); return;
+        }
+        eventRows.forEach((event) => {
+          const item = document.createElement('div'); const text = document.createElement('span'); const whenEvent = document.createElement('time');
+          text.textContent = activityEventLabel(event);
+          whenEvent.dateTime = new Date(Number(event.timestamp) * 1000).toISOString(); whenEvent.textContent = formatActivityTime(event.timestamp);
+          item.append(text, whenEvent); events.append(item);
+        });
+      };
+      const loadEventRows = async () => {
+        if (events.dataset.loaded === 'true') return;
+        events.dataset.loaded = 'loading'; events.replaceChildren();
+        const loading = document.createElement('span'); loading.textContent = '正在读取这一天的详细事件…'; events.append(loading);
+        try {
+          const params = new URLSearchParams({ category: selectedActivityCategory, app_key: record.app_key || '', date: apiDate(selectedDate) });
+          const response = await fetch(`/api/details/events?${params}`, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+          if (!response.ok) throw new Error('事件读取失败');
+          const result = await response.json(); renderEventRows(Array.isArray(result.events) ? result.events : []); events.dataset.loaded = 'true';
+        } catch (error) {
+          events.replaceChildren(); const failure = document.createElement('span'); failure.textContent = '详细事件暂时无法读取，请稍后重试。'; events.append(failure); events.dataset.loaded = '';
+        }
+      };
       summary.addEventListener('click', () => {
         const expanded = summary.getAttribute('aria-expanded') === 'true'; summary.setAttribute('aria-expanded', String(!expanded)); events.hidden = expanded;
+        if (!expanded) void loadEventRows();
       });
       row.append(summary, events); activityList.append(row);
     });

@@ -85,6 +85,8 @@ body.admin-panel[data-loading="true"] .panel-card {
   margin-bottom: 14px;
   padding: clamp(18px, 3vw, 25px);
   border-radius: 26px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 380px;
 }
 
 .panel-section {
@@ -690,6 +692,7 @@ input[type="checkbox"] {
 }
 
 .metric-card {
+  min-width: 0;
   padding: 16px;
   color: var(--alive-ink);
   border: 1px solid var(--alive-border-soft);
@@ -706,13 +709,19 @@ input[type="checkbox"] {
 
 .metric-value {
   margin-bottom: 7px;
+  overflow: hidden;
   font: 760 1.55rem/1 "Segoe UI Variable", sans-serif;
   font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metric-label {
+  overflow: hidden;
   color: var(--alive-muted);
   font: 520 .7rem/1.35 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 760px) {

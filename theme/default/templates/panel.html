@@ -22,20 +22,16 @@
         <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('{{ url_for('static', filename='background-cache.js') }}', { scope: '/' }).catch(() => {});</script>
         <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}" />
         <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}" />
-        <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}" />
+        <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}" media="print" onload="this.media='all'" />
+        <noscript><link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}" /></noscript>
         <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}" />
-        <style>
-            body {
-                background: url('{{ c.page.background }}') no-repeat center center fixed;
-                background-size: cover;
-            }
-        </style>
         <script src="{{ url_for('static', filename='color-mode.js') }}" defer></script>
         <script src="{{ url_for('static', filename='glass-select.js') }}" defer></script>
         <script src="{{ url_for('static', filename='panel.js') }}" defer></script>
+        <script src="{{ url_for('static', filename='background-loader.js') }}" defer></script>
     </head>
 
-    <body class="admin-panel" data-loading="true" aria-busy="true">
+    <body class="admin-panel" data-page-background="{{ c.page.background }}" data-loading="true" aria-busy="true">
         <div class="panel-container">
             <div class="panel-header">
                 <div class="panel-heading">

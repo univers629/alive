@@ -711,75 +711,13 @@ async function fetchMetrics() {
         const container = document.getElementById('metrics-container');
         container.innerHTML = '';
 
-        // 今日访问
-        if (data.daily) {
-            if (data.daily['/']) {
-                addMetricCard(container, '今日首页访问量', data.daily['/'] || 0);
-            }
-            let apiCalls = 0;
-            for (const [path, count] of Object.entries(data.daily)) {
-                if (path.startsWith('/') && path !== '/') {
-                    apiCalls += count;
-                }
-            }
-            addMetricCard(container, '今日 API 调用次数', apiCalls);
-        }
-
-        // 本周访问
-        if (data.weekly) {
-            if (data.weekly['/']) {
-                addMetricCard(container, '本周首页访问量', data.weekly['/'] || 0);
-            }
-            let apiCalls = 0;
-            for (const [path, count] of Object.entries(data.weekly)) {
-                if (path.startsWith('/') && path !== '/') {
-                    apiCalls += count;
-                }
-            }
-            addMetricCard(container, '本周 API 调用次数', apiCalls);
-        }
-
-        // 本月访问
-        if (data.monthly) {
-            if (data.monthly['/']) {
-                addMetricCard(container, '本月首页访问量', data.monthly['/'] || 0);
-            }
-            let apiCalls = 0;
-            for (const [path, count] of Object.entries(data.monthly)) {
-                if (path.startsWith('/') && path !== '/') {
-                    apiCalls += count;
-                }
-            }
-            addMetricCard(container, '本月 API 调用次数', apiCalls);
-        }
-
-        // 本年访问
-        if (data.yearly) {
-            if (data.yearly['/']) {
-                addMetricCard(container, '本年首页访问量', data.yearly['/'] || 0);
-            }
-            let apiCalls = 0;
-            for (const [path, count] of Object.entries(data.yearly)) {
-                if (path.startsWith('/') && path !== '/') {
-                    apiCalls += count;
-                }
-            }
-            addMetricCard(container, '本年 API 调用次数', apiCalls);
-        }
-
-        // 总访问
-        if (data.total) {
-            if (data.total['/']) {
-                addMetricCard(container, '首页总访问量', data.total['/'] || 0);
-            }
-            let apiCalls = 0;
-            for (const [path, count] of Object.entries(data.total)) {
-                if (path.startsWith('/') && path !== '/') {
-                    apiCalls += count;
-                }
-            }
-            addMetricCard(container, 'API 总调用次数', apiCalls);
-        }
+        const homeVisits = [
+            ['daily', '今日首页访问量'], ['weekly', '本周首页访问量'], ['monthly', '本月首页访问量'],
+            ['yearly', '本年首页访问量'], ['total', '首页总访问量'],
+        ];
+        homeVisits.forEach(([period, label]) => {
+            if (data[period]) addMetricCard(container, label, data[period]['/'] || 0);
+        });
 
     } catch (error) {
         console.error('获取统计数据失败:', error);
@@ -792,10 +730,13 @@ async function fetchMetrics() {
 function addMetricCard(container, label, value) {
     const card = document.createElement('div');
     card.className = 'metric-card';
-    card.innerHTML = `
-        <div class="metric-value">${value}</div>
-        <div class="metric-label">${label}</div>
-    `;
+    const metricValue = document.createElement('div');
+    metricValue.className = 'metric-value';
+    metricValue.textContent = String(value);
+    const metricLabel = document.createElement('div');
+    metricLabel.className = 'metric-label';
+    metricLabel.textContent = label;
+    card.append(metricValue, metricLabel);
     container.appendChild(card);
 }
 

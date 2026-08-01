@@ -782,6 +782,15 @@ def details_query(period: str = "daily", date: str | None = None):
     return details_response(period, date)
 
 
+@app.get(
+    "/api/details/events",
+    tags=["公开读取 / Public reads"],
+    summary="获取应用在指定日期的详细活动事件",
+)
+def details_events(category: str = "desktop", app_key: str = "", date: str | None = None):
+    return {"success": True, **d.activity_events(category, app_key, date)}
+
+
 async def _event_stream(request: Request, event_id: int):
     global _active_viewers, _presence_revision
     _active_viewers += 1

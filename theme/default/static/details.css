@@ -146,18 +146,18 @@
 
 .details-activity-tabs {
   display: inline-flex;
-  gap: 3px;
-  padding: 3px;
-  border: 1px solid var(--alive-border-soft);
+  gap: 5px;
+  padding: 0;
+  border: 0;
   border-radius: 999px;
-  background: var(--alive-surface);
+  background: transparent;
 }
 
 .details-activity-tabs button {
-  min-height: 29px;
-  padding: 0 10px;
+  min-height: 34px;
+  padding: 0 12px;
   color: var(--alive-muted);
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 999px;
   outline: none;
   background: transparent;
@@ -166,9 +166,10 @@
 }
 
 .details-activity-tabs button[aria-selected="true"] {
-  color: #fff;
-  background: var(--alive-accent);
-  box-shadow: 0 3px 10px rgba(89, 110, 255, .22);
+  color: var(--alive-ink);
+  border-color: var(--alive-border-soft);
+  background: color-mix(in srgb, var(--alive-surface) 72%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
 }
 
 .details-activity-period {
@@ -529,10 +530,6 @@
   background: transparent;
   text-align: left;
   cursor: pointer;
-}
-
-.details-activity-summary:hover {
-  background: color-mix(in srgb, var(--alive-accent) 7%, transparent);
 }
 
 .details-activity-summary[aria-expanded="true"] {

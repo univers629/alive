@@ -461,10 +461,12 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert background_worker.status_code == 200
         assert background_worker.headers["service-worker-allowed"] == "/"
         assert "alive-image-cache-v1" in background_worker.text
+        assert "isSiteIcon" in background_worker.text
 
         home = client.get("/")
         assert "background-cache.js" in home.text
         assert "serviceWorker.register" in home.text
+        assert "background-loader.js" in home.text
 
         mode_css = client.get("/static/color-mode.css").text
         assert 'content: "☀";' in mode_css
@@ -592,7 +594,10 @@ def test_details_page_uses_real_metrics_and_sortable_device_snapshot():
         assert payload["activity"]["total_records"] >= 1
         assert payload["activity"]["categories"]["desktop"]["recent"][0]["app_name"] == "Visual Studio Code"
         assert payload["activity"]["categories"]["desktop"]["recent"][0]["app_icon_url"] == "/app-icons/code.png"
-        assert payload["activity"]["categories"]["desktop"]["recent"][0]["events"][0]["event_type"] == "app_open"
+        assert payload["activity"]["categories"]["desktop"]["recent"][0]["latest_event"]["event_type"] == "app_open"
+        events = client.get("/api/details/events", params={"category": "desktop", "app_key": "code"})
+        assert events.status_code == 200
+        assert events.json()["events"][0]["event_type"] == "app_open"
         assert payload["activity"]["categories"]["mobile"]["recent"][0]["app_name"] == "Mobile App"
         weekly = client.get("/api/details/query?period=weekly")
         assert weekly.status_code == 200

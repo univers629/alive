@@ -792,21 +792,20 @@ class Data:
             for category in ("mobile", "desktop")
         }
         app_totals: dict[str, dict[str, dict[str, Any]]] = {"mobile": {}, "desktop": {}}
-        app_events: dict[str, dict[str, list[dict[str, Any]]]] = {"mobile": {}, "desktop": {}}
+        latest_events: dict[str, dict[str, dict[str, Any]]] = {"mobile": {}, "desktop": {}}
         for device_type, count in count_rows:
             categories[self._activity_category(device_type)]["total_records"] += int(count)
         for event in event_rows:
             category = self._activity_category(event.device_type)
             if not event.app_key:
                 continue
-            events = app_events[category].setdefault(event.app_key, [])
-            if len(events) < 12:
-                events.append({
+            if event.app_key not in latest_events[category]:
+                latest_events[category][event.app_key] = {
                     "event_type": event.event_type,
                     "app_name": event.app_name or event.app_key,
                     "previous_app_name": event.previous_app_name,
                     "timestamp": event.created_at,
-                })
+                }
 
         for row in rows:
             category = self._activity_category(row.device_type)
@@ -874,7 +873,7 @@ class Data:
                 {
                     **item,
                     "duration_seconds": round(item["duration_seconds"]),
-                    "events": app_events[category].get(item["app_key"], []),
+                    "latest_event": latest_events[category].get(item["app_key"]),
                 }
                 for item in sorted(apps, key=lambda item: item["last_seen_at"], reverse=True)[:50]
             ]
@@ -886,6 +885,46 @@ class Data:
             "today_seconds": sum(category["period_seconds"] for category in categories.values()),
             "total_records": sum(category["total_records"] for category in categories.values()),
             "categories": categories,
+        }
+
+    def activity_events(self, category: str, app_key: str, selected_date: str | None = None) -> dict[str, Any]:
+        """Return one application's detailed events for the selected local day."""
+        category = "mobile" if category == "mobile" else "desktop"
+        app_key = str(app_key or "").strip()[:240]
+        if not app_key:
+            return {"date_label": "", "events": []}
+        timezone = pytz.timezone(self._c.main.timezone)
+        local_now = datetime.now(timezone)
+        try:
+            selected = timezone.localize(datetime.strptime(selected_date or "", "%Y-%m-%d"))
+        except ValueError:
+            selected = local_now
+        selected = min(selected, local_now)
+        range_start_local = selected.replace(hour=0, minute=0, second=0, microsecond=0)
+        range_start = range_start_local.timestamp()
+        range_end = min((range_start_local + timedelta(days=1)).timestamp(), time())
+        with self.session() as session:
+            rows = session.scalars(
+                select(_AppActivityEventData)
+                .where(
+                    _AppActivityEventData.app_key == app_key,
+                    _AppActivityEventData.created_at >= range_start,
+                    _AppActivityEventData.created_at < range_end,
+                )
+                .order_by(_AppActivityEventData.created_at.desc(), _AppActivityEventData.id.desc())
+            ).all()
+        return {
+            "date_label": range_start_local.strftime("%Y 年 %m 月 %d 日"),
+            "events": [
+                {
+                    "event_type": row.event_type,
+                    "app_name": row.app_name or row.app_key,
+                    "previous_app_name": row.previous_app_name,
+                    "timestamp": row.created_at,
+                }
+                for row in rows
+                if self._activity_category(row.device_type) == category
+            ],
         }
 
     def device_remove(self, id: str) -> bool:
