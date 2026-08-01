@@ -556,13 +556,45 @@ def favicon_url() -> str:
     return c.page.favicon
 
 
-def profile_avatar_url() -> str:
+def profile_avatar_url(size: int = 256) -> str:
     if PROFILE_AVATAR_PATH.is_file():
         try:
-            return f"/profile-avatar.webp?v={PROFILE_AVATAR_PATH.stat().st_mtime_ns}"
+            return f"/profile-avatar.webp?v={PROFILE_AVATAR_PATH.stat().st_mtime_ns}&size={size}"
         except OSError:
             pass
     return ""
+
+
+@app.get("/profile-avatar.webp", include_in_schema=False)
+def profile_avatar(request: Request, size: int = 256):
+    """Serve the current avatar at its display-appropriate size without storing copies."""
+    if not PROFILE_AVATAR_PATH.is_file():
+        raise HTTPException(status_code=404)
+    size = max(32, min(int(size), 512))
+    cache_control = (
+        "public, max-age=31536000, immutable"
+        if request.query_params.get("v")
+        else "no-cache"
+    )
+    try:
+        with Image.open(PROFILE_AVATAR_PATH) as source:
+            if source.width <= size and source.height <= size:
+                return FileResponse(
+                    PROFILE_AVATAR_PATH,
+                    media_type="image/webp",
+                    headers={"Cache-Control": cache_control},
+                )
+            avatar = source.convert("RGBA")
+            avatar.thumbnail((size, size), Image.Resampling.LANCZOS)
+            output = io.BytesIO()
+            avatar.save(output, format="WEBP", quality=82, method=6)
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise HTTPException(status_code=404) from None
+    return Response(
+        content=output.getvalue(),
+        media_type="image/webp",
+        headers={"Cache-Control": cache_control},
+    )
 
 
 @app.get("/docs", response_class=HTMLResponse, include_in_schema=False)

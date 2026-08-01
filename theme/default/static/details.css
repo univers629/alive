@@ -174,8 +174,9 @@
 .details-activity-period {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 10px;
+  gap: 5px;
+  min-height: 36px;
+  padding: 0 8px;
   color: var(--alive-muted);
   border: 1px solid var(--alive-border-soft);
   border-radius: 999px;
@@ -189,27 +190,72 @@
 }
 
 .details-date-picker__trigger {
-  padding: 0;
-  color: inherit;
-  border: 0;
-  background: transparent;
-  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 13px;
+  color: var(--alive-ink);
+  border: 1px solid var(--alive-border);
+  border-radius: 12px;
+  background: var(--alive-panel);
+  box-shadow: 0 5px 14px rgba(74, 85, 180, .1);
+  font: 700 .72rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
   cursor: pointer;
 }
 
-.details-date-picker__trigger::after {
-  content: "⌄";
-  margin-left: 4px;
+.details-date-picker__trigger:hover,
+.details-date-picker__trigger[aria-expanded="true"] {
+  color: #fff;
+  border-color: var(--alive-accent);
+  background: var(--alive-accent);
+  box-shadow: 0 6px 16px rgba(89, 110, 255, .28);
+}
+
+.details-date-picker__trigger:focus-visible,
+.details-date-picker__grid button:focus-visible,
+.details-date-picker__head button:focus-visible {
+  outline: 2px solid var(--alive-accent);
+  outline-offset: 2px;
+}
+
+.details-date-picker__calendar {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
   color: var(--alive-accent);
+  border-radius: 5px;
+  background: var(--alive-border-soft);
+  font-size: .66rem;
+}
+
+.details-date-picker__trigger:hover .details-date-picker__calendar,
+.details-date-picker__trigger[aria-expanded="true"] .details-date-picker__calendar {
+  color: var(--alive-accent);
+  background: rgba(255, 255, 255, .9);
+}
+
+.details-date-picker__chevron {
+  color: var(--alive-accent);
+  font-size: .9rem;
+  transition: transform 180ms ease;
+}
+
+.details-date-picker__trigger[aria-expanded="true"] .details-date-picker__chevron {
+  color: #fff;
+  transform: rotate(180deg);
 }
 
 .details-date-picker__menu {
   position: absolute;
-  z-index: 20;
+  z-index: 60;
   top: calc(100% + 10px);
-  right: 0;
-  width: 236px;
-  padding: 11px;
+  left: 50%;
+  width: 260px;
+  padding: 13px;
+  transform: translateX(-50%);
   color: var(--alive-ink);
   border: 1px solid var(--alive-border);
   border-radius: 16px;

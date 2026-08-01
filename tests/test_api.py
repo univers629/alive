@@ -1030,6 +1030,11 @@ def test_admin_profile_avatar_generates_avatar_favicon_and_validates_social_link
         assert uploaded.status_code == 200
         assert uploaded.json()["profile_avatar"].startswith("/profile-avatar.webp?v=")
         assert uploaded.json()["favicon"].startswith("/favicon.ico?v=")
+        avatar_response = client.get(uploaded.json()["profile_avatar"])
+        assert avatar_response.status_code == 200
+        assert avatar_response.headers["cache-control"] == "public, max-age=31536000, immutable"
+        with Image.open(io.BytesIO(avatar_response.content)) as resized_avatar:
+            assert resized_avatar.size == (256, 256)
         with Image.open(avatar_path) as avatar:
             assert avatar.format == "WEBP"
             assert avatar.size == (512, 512)

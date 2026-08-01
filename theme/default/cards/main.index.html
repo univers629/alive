@@ -39,7 +39,7 @@
     <aside class="profile-sidebar" aria-label="个人资料">
         <div class="profile-avatar" aria-label="{{ username }} 的头像">
             {% if profile_avatar %}
-            <img src="{{ profile_avatar }}" alt="{{ username }} 的头像" decoding="async">
+            <img src="{{ profile_avatar }}" alt="{{ username }} 的头像" width="156" height="156" decoding="async">
             {% else %}
             <span aria-hidden="true">{{ username[0] }}</span>
             {% endif %}

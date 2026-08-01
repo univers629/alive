@@ -7,6 +7,7 @@
   const donutLegend = document.getElementById('details-donut-legend');
   const usageBars = document.getElementById('details-usage-bars');
   const periodLabel = document.getElementById('details-activity-period-label');
+  const datePickerTrigger = document.getElementById('details-date-picker-trigger');
   const datePickerMenu = document.getElementById('details-date-picker-menu');
   const datePickerGrid = document.getElementById('details-date-picker-grid');
   const datePickerTitle = document.getElementById('details-date-picker-title');
@@ -47,10 +48,20 @@
   function earliestActivityDate() { const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - 183); return date; }
   function isAvailableDate(date) { const today = new Date(); today.setHours(23, 59, 59, 999); return date >= earliestActivityDate() && date <= today; }
   function monthName(month) { return `${month + 1} 月`; }
-  function closeDatePicker() { if (datePickerMenu) datePickerMenu.hidden = true; periodLabel?.setAttribute('aria-expanded', 'false'); }
+  function closeDatePicker() { if (datePickerMenu) datePickerMenu.hidden = true; datePickerTrigger?.setAttribute('aria-expanded', 'false'); }
   function datePickerButton(label, disabled, onClick, selected = false) {
     const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.disabled = disabled; button.className = selected ? 'is-selected' : '';
-    if (!disabled) button.addEventListener('click', onClick); return button;
+    if (!disabled) button.addEventListener('click', (event) => { event.stopPropagation(); onClick(); }); return button;
+  }
+  function setSelectedYear(year) {
+    const month = selectedDate.getMonth(); const day = selectedDate.getDate();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    selectedDate = new Date(year, month, Math.min(day, lastDay));
+  }
+  function setSelectedMonth(month) {
+    const year = selectedDate.getFullYear(); const day = selectedDate.getDate();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    selectedDate = new Date(year, month, Math.min(day, lastDay));
   }
   function renderDatePicker() {
     if (!datePickerGrid || !datePickerTitle) return;
@@ -58,13 +69,13 @@
     if (datePickerLevel === 'year') {
       datePickerTitle.textContent = '选择年份';
       for (let year = earliest.getFullYear(); year <= today.getFullYear(); year += 1) {
-        datePickerGrid.append(datePickerButton(`${year} 年`, false, () => { selectedDate.setFullYear(year); datePickerLevel = 'month'; renderDatePicker(); }, selectedDate.getFullYear() === year));
+        datePickerGrid.append(datePickerButton(`${year} 年`, false, () => { setSelectedYear(year); datePickerLevel = 'month'; datePickerMenu.hidden = false; renderDatePicker(); }, selectedDate.getFullYear() === year));
       }
     } else if (datePickerLevel === 'month') {
       datePickerTitle.textContent = `${selectedDate.getFullYear()} 年 · 选择月份`;
       for (let month = 0; month < 12; month += 1) {
         const candidate = new Date(selectedDate.getFullYear(), month, 1); const end = new Date(selectedDate.getFullYear(), month + 1, 0, 23, 59, 59);
-        datePickerGrid.append(datePickerButton(monthName(month), end < earliest || candidate > today, () => { selectedDate.setMonth(month); datePickerLevel = 'day'; renderDatePicker(); }, selectedDate.getMonth() === month));
+        datePickerGrid.append(datePickerButton(monthName(month), end < earliest || candidate > today, () => { setSelectedMonth(month); datePickerLevel = 'day'; datePickerMenu.hidden = false; renderDatePicker(); }, selectedDate.getMonth() === month));
       }
     } else {
       datePickerTitle.textContent = `${selectedDate.getFullYear()} 年 ${selectedDate.getMonth() + 1} 月 · 选择日期`;
@@ -217,9 +228,10 @@
   activityTabs.forEach((tab) => tab.addEventListener('click', () => { selectedActivityCategory = tab.dataset.activityCategory === 'desktop' ? 'desktop' : 'mobile'; if (payload) render(payload); }));
   periodTabs.forEach((tab) => tab.addEventListener('click', () => { selectedPeriod = tab.dataset.activityPeriod || 'daily'; refresh(); }));
   document.getElementById('details-period-prev')?.addEventListener('click', () => changePeriod(-1)); document.getElementById('details-period-next')?.addEventListener('click', () => changePeriod(1));
-  periodLabel?.addEventListener('click', () => { if (!datePickerMenu) return; datePickerLevel = 'year'; datePickerMenu.hidden = !datePickerMenu.hidden; periodLabel.setAttribute('aria-expanded', String(!datePickerMenu.hidden)); if (!datePickerMenu.hidden) renderDatePicker(); });
-  document.getElementById('details-date-picker-back')?.addEventListener('click', () => { if (datePickerLevel === 'day') datePickerLevel = 'month'; else if (datePickerLevel === 'month') datePickerLevel = 'year'; else closeDatePicker(); renderDatePicker(); });
-  document.getElementById('details-date-picker-close')?.addEventListener('click', closeDatePicker);
+  datePickerTrigger?.addEventListener('click', (event) => { event.stopPropagation(); if (!datePickerMenu) return; datePickerLevel = 'year'; datePickerMenu.hidden = !datePickerMenu.hidden; datePickerTrigger.setAttribute('aria-expanded', String(!datePickerMenu.hidden)); if (!datePickerMenu.hidden) renderDatePicker(); });
+  datePickerMenu?.addEventListener('click', (event) => event.stopPropagation());
+  document.getElementById('details-date-picker-back')?.addEventListener('click', (event) => { event.stopPropagation(); if (datePickerLevel === 'day') datePickerLevel = 'month'; else if (datePickerLevel === 'month') datePickerLevel = 'year'; else { closeDatePicker(); return; } renderDatePicker(); });
+  document.getElementById('details-date-picker-close')?.addEventListener('click', (event) => { event.stopPropagation(); closeDatePicker(); });
   document.addEventListener('click', (event) => { if (datePickerMenu && !datePickerMenu.hidden && !event.target.closest('.details-date-picker')) closeDatePicker(); });
   refresh(); window.setInterval(() => { if (!document.hidden) refresh(); }, 10000);
 })();

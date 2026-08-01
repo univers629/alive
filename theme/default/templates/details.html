@@ -33,18 +33,9 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='site-footer.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='music-island.css') }}">
     </noscript>
-    <style>
-        body {
-            background: url('{{ page_background }}') no-repeat center center fixed;
-            background-size: cover;
-            background-position: center center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-        }
-    </style>
 </head>
 
-<body class="details-page">
+<body class="details-page" data-page-background="{{ page_background }}">
     {{ site_chrome | safe }}
 
     <main class="details-shell">
@@ -106,19 +97,23 @@
                     </div>
                     <div class="details-activity-period">
                         <button type="button" class="details-period-nav" id="details-period-prev" aria-label="上一周期">‹</button>
-                        <div class="details-date-picker">
-                            <button type="button" class="details-date-picker__trigger" id="details-activity-period-label" aria-expanded="false">今天</button>
-                            <div class="details-date-picker__menu" id="details-date-picker-menu" hidden>
-                                <div class="details-date-picker__head">
-                                    <button type="button" id="details-date-picker-back" aria-label="返回上一级">‹</button>
-                                    <strong id="details-date-picker-title">选择日期</strong>
-                                    <button type="button" id="details-date-picker-close" aria-label="关闭日期选择">×</button>
-                                </div>
-                                <div class="details-date-picker__grid" id="details-date-picker-grid"></div>
-                            </div>
-                        </div>
                         <button type="button" class="details-period-nav" id="details-period-next" aria-label="下一周期">›</button>
                         <b id="details-activity-record-count">0 条</b>
+                    </div>
+                    <div class="details-date-picker">
+                        <button type="button" class="details-date-picker__trigger" id="details-date-picker-trigger" aria-expanded="false" aria-controls="details-date-picker-menu">
+                            <span class="details-date-picker__calendar" aria-hidden="true">▣</span>
+                            <span id="details-activity-period-label">今天</span>
+                            <span class="details-date-picker__chevron" aria-hidden="true">⌄</span>
+                        </button>
+                        <div class="details-date-picker__menu" id="details-date-picker-menu" hidden>
+                            <div class="details-date-picker__head">
+                                <button type="button" id="details-date-picker-back" aria-label="返回上一级">‹</button>
+                                <strong id="details-date-picker-title">选择日期</strong>
+                                <button type="button" id="details-date-picker-close" aria-label="关闭日期选择">×</button>
+                            </div>
+                            <div class="details-date-picker__grid" id="details-date-picker-grid"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -201,6 +196,7 @@
     <script src="{{ url_for('static', filename='glass-select.js') }}" defer></script>
     <script src="{{ url_for('static', filename='site-chrome.js') }}" defer></script>
     <script src="{{ url_for('static', filename='details.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='background-loader.js') }}" defer></script>
 </body>
 
 </html>
