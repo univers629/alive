@@ -672,6 +672,7 @@ def details_response() -> dict:
     }
     health = d.health_state
     music = d.music_state
+    activity = d.activity_snapshot(timeout)
     _, status = d.status
 
     online_count = state_counts["active"] + state_counts["idle"]
@@ -696,6 +697,10 @@ def details_response() -> dict:
         )
     else:
         summary_parts.append("当前没有公开的音乐会话")
+    if activity["today_seconds"]:
+        summary_parts.append(f"今日已记录应用使用 {int(activity['today_seconds'] // 60)} 分钟")
+    else:
+        summary_parts.append("等待支持应用记录的客户端上报首条活动")
     summary_parts.append(
         f"今天主页被查看 {visit_periods['daily']} 次，收到 {comment_counts['today']} 条留言"
     )
@@ -719,7 +724,8 @@ def details_response() -> dict:
         "comments": comment_counts,
         "health": health,
         "music": music,
-        "history_available": False,
+        "activity": activity,
+        "history_available": bool(activity["total_records"]),
     }
 
 

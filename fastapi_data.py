@@ -52,6 +52,20 @@ class _DeviceStatusData(Base):
     last_updated: Mapped[float] = mapped_column(Float, default=time, onupdate=time)
 
 
+class _AppActivityData(Base):
+    __tablename__ = "app_activities"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(LIMIT), nullable=False, index=True)
+    device_type: Mapped[str] = mapped_column(String(24), nullable=False, default="desktop", index=True)
+    app_key: Mapped[str] = mapped_column(String(240), nullable=False, index=True)
+    app_name: Mapped[str] = mapped_column(String(240), nullable=False, default="")
+    window_title: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    started_at: Mapped[float] = mapped_column(Float, nullable=False, default=time, index=True)
+    ended_at: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_seen_at: Mapped[float] = mapped_column(Float, nullable=False, default=time, index=True)
+
+
 class _MetricsMetaData(Base):
     __tablename__ = "metrics_meta"
 
@@ -245,6 +259,12 @@ class Data:
             for name, statement in missing_music.items():
                 if name not in music_columns:
                     connection.execute(text(statement))
+            activity_columns = {column["name"] for column in inspect(self.engine).get_columns("app_activities")}
+            if "device_type" not in activity_columns:
+                connection.execute(text("ALTER TABLE app_activities ADD COLUMN device_type VARCHAR(24) NOT NULL DEFAULT 'desktop'"))
+            # App activity records intentionally retain only app identity and time.
+            # Remove titles saved by the first preview implementation.
+            connection.execute(text("UPDATE app_activities SET window_title = '' WHERE window_title <> ''"))
 
     @contextmanager
     def session(self) -> Iterator[Any]:
@@ -579,7 +599,129 @@ class Data:
                 if fields:
                     device.fields = u.deep_merge_dict(device.fields or {}, fields)
                 device.last_updated = time()
+            self._record_app_activity(session, id, bool(using), fields or {})
             self._main(session).last_updated = time()
+
+    @staticmethod
+    def _activity_duration(activity: _AppActivityData, now: float, grace: float) -> float:
+        ended_at = activity.ended_at
+        if ended_at is None:
+            ended_at = min(now, activity.last_seen_at + grace)
+        return max(0.0, ended_at - activity.started_at)
+
+    def _record_app_activity(self, session: Any, device_id: str, using: bool, fields: dict) -> None:
+        """Close/open a foreground-app interval when a capable client reports it."""
+        if fields.get("activity_reporting") is not True:
+            return
+        now = time()
+        current = session.scalar(
+            select(_AppActivityData)
+            .where(_AppActivityData.device_id == device_id, _AppActivityData.ended_at.is_(None))
+            .order_by(_AppActivityData.started_at.desc())
+            .limit(1)
+        )
+        app_key = str(fields.get("activity_app_id") or "").strip()[:240]
+        app_name = str(fields.get("activity_app_name") or "").strip()[:240]
+        device_type = str(fields.get("activity_device_type") or "desktop").strip().lower()[:24]
+
+        if not using or not app_key:
+            if current is not None:
+                current.ended_at = now
+                current.last_seen_at = now
+            return
+
+        if current is not None and current.app_key == app_key:
+            current.last_seen_at = now
+            current.device_type = device_type
+            if app_name:
+                current.app_name = app_name
+            return
+
+        if current is not None:
+            current.ended_at = now
+            current.last_seen_at = now
+        session.add(
+            _AppActivityData(
+                device_id=device_id,
+                device_type=device_type,
+                app_key=app_key,
+                app_name=app_name or app_key,
+                window_title="",
+                started_at=now,
+                last_seen_at=now,
+            )
+        )
+
+    def activity_snapshot(self, timeout: float = 60) -> dict[str, Any]:
+        """Return separate mobile and desktop foreground-app intervals for details."""
+        now = time()
+        grace = max(15.0, float(timeout) if timeout > 0 else 75.0)
+        timezone = pytz.timezone(self._c.main.timezone)
+        today_start = datetime.now(timezone).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        with self.session() as session:
+            recent_rows = session.scalars(
+                select(_AppActivityData)
+                .order_by(_AppActivityData.last_seen_at.desc(), _AppActivityData.id.desc())
+                .limit(80)
+            ).all()
+            today_rows = session.scalars(
+                select(_AppActivityData)
+                .where(_AppActivityData.last_seen_at >= today_start)
+                .order_by(_AppActivityData.started_at.desc())
+            ).all()
+            count_rows = session.execute(
+                select(_AppActivityData.device_type, func.count()).group_by(_AppActivityData.device_type)
+            ).all()
+
+        def category_for(device_type: str) -> str:
+            return "mobile" if device_type in {"mobile", "phone", "tablet", "watch"} else "desktop"
+
+        def serialize(row: _AppActivityData) -> dict[str, Any]:
+            active = row.ended_at is None and row.last_seen_at + grace >= now
+            effective_end = row.ended_at if row.ended_at is not None else min(now, row.last_seen_at + grace)
+            return {
+                "id": row.id,
+                "device_id": row.device_id,
+                "device_type": category_for(row.device_type),
+                "app_name": row.app_name or row.app_key,
+                "started_at": row.started_at,
+                "ended_at": effective_end,
+                "duration_seconds": max(0.0, effective_end - row.started_at),
+                "active": active,
+            }
+
+        categories: dict[str, dict[str, Any]] = {
+            "mobile": {"today_seconds": 0.0, "recent": [], "top_apps": [], "total_records": 0},
+            "desktop": {"today_seconds": 0.0, "recent": [], "top_apps": [], "total_records": 0},
+        }
+        app_totals: dict[str, dict[str, dict[str, Any]]] = {"mobile": {}, "desktop": {}}
+        for device_type, count in count_rows:
+            categories[category_for(device_type)]["total_records"] += int(count)
+        for row in recent_rows:
+            category = category_for(row.device_type)
+            if len(categories[category]["recent"]) < 30:
+                categories[category]["recent"].append(serialize(row))
+        for row in today_rows:
+            serialized = serialize(row)
+            overlap = max(0.0, float(serialized["ended_at"]) - max(today_start, row.started_at))
+            category = serialized["device_type"]
+            categories[category]["today_seconds"] += overlap
+            key = row.app_key
+            item = app_totals[category].setdefault(key, {"app_name": serialized["app_name"], "duration_seconds": 0.0})
+            item["duration_seconds"] += overlap
+
+        for category, data in categories.items():
+            data["today_seconds"] = round(data["today_seconds"])
+            data["top_apps"] = [
+                {**item, "duration_seconds": round(item["duration_seconds"])}
+                for item in sorted(app_totals[category].values(), key=lambda item: item["duration_seconds"], reverse=True)[:5]
+            ]
+        total_records = sum(category["total_records"] for category in categories.values())
+        return {
+            "today_seconds": sum(category["today_seconds"] for category in categories.values()),
+            "total_records": int(total_records),
+            "categories": categories,
+        }
 
     def device_remove(self, id: str) -> bool:
         with self._write_lock, self.session() as session:

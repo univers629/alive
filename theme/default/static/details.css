@@ -127,6 +127,146 @@
   margin-top: 14px;
 }
 
+.details-activities {
+  margin-top: 14px;
+  padding: clamp(18px, 3vw, 26px);
+}
+
+.details-activities__head {
+  align-items: center;
+}
+
+.details-activity-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.details-activity-tabs {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 999px;
+  background: var(--alive-surface);
+}
+
+.details-activity-tabs button {
+  min-height: 29px;
+  padding: 0 10px;
+  color: var(--alive-muted);
+  border: 0;
+  border-radius: 999px;
+  outline: none;
+  background: transparent;
+  font: 650 .66rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  cursor: pointer;
+}
+
+.details-activity-tabs button[aria-selected="true"] {
+  color: #fff;
+  background: var(--alive-accent);
+  box-shadow: 0 3px 10px rgba(89, 110, 255, .22);
+}
+
+.details-activity-period {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  color: var(--alive-muted);
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 999px;
+  background: var(--alive-surface);
+  font: 600 .7rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  white-space: nowrap;
+}
+
+.details-activity-period > span:first-child {
+  color: var(--alive-accent);
+  font-size: .95rem;
+}
+
+.details-activity-period b {
+  padding-left: 7px;
+  border-left: 1px solid var(--alive-border-soft);
+  color: var(--alive-ink);
+  font-weight: 700;
+}
+
+.details-activity-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 17px;
+}
+
+.details-activity-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 17px;
+  background: var(--alive-surface-soft);
+}
+
+.details-activity-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  overflow: hidden;
+  color: #fff;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--alive-accent), #5bc9ff);
+  box-shadow: 0 8px 18px rgba(89, 130, 255, .18);
+  font: 760 1rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.details-activity-copy {
+  min-width: 0;
+}
+
+.details-activity-copy strong,
+.details-activity-copy span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details-activity-copy strong {
+  font: 690 .84rem/1.3 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.details-activity-copy span {
+  margin-top: 4px;
+  color: var(--alive-muted);
+  font: 480 .7rem/1.3 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.details-activity-meta {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  color: var(--alive-muted);
+  font: 600 .66rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  white-space: nowrap;
+}
+
+.details-activity-meta strong {
+  color: var(--alive-ink);
+  font-size: .72rem;
+}
+
+.details-activity-meta time {
+  color: var(--alive-faint);
+  font-size: .62rem;
+}
+
 .details-devices,
 .details-situation,
 .details-history {
@@ -302,32 +442,42 @@
   font: 650 .75rem/1.4 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
 }
 
-.details-history > p {
-  margin: 13px 0 0;
-  color: var(--alive-muted);
-  font: 450 .77rem/1.65 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
-}
-
-.details-history__next {
-  margin-top: 17px;
-  padding: 13px;
-  border: 1px solid var(--alive-border-soft);
-  border-radius: 15px;
-  background: var(--alive-surface);
-}
-
-.details-history__next > span {
-  color: var(--alive-accent);
-  font: 680 .68rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
-}
-
-.details-history__next ol {
+.details-app-ranking {
   display: grid;
-  gap: 7px;
-  margin: 11px 0 0;
-  padding-left: 19px;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.details-app-ranking__row {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--alive-border-soft);
+}
+
+.details-app-ranking__row:last-child {
+  border-bottom: 0;
+}
+
+.details-app-ranking__row b {
+  color: var(--alive-accent);
+  font: 740 .65rem/1 "Segoe UI Variable", sans-serif;
+}
+
+.details-app-ranking__row span {
+  overflow: hidden;
   color: var(--alive-muted);
-  font: 500 .7rem/1.4 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  font: 570 .72rem/1.3 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details-app-ranking__row strong {
+  color: var(--alive-ink);
+  font: 670 .68rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  white-space: nowrap;
 }
 
 .details-empty {
@@ -375,6 +525,15 @@
     flex-direction: column;
   }
 
+  .details-activities__head {
+    align-items: flex-start;
+  }
+
+  .details-activity-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .details-sort {
     width: 100%;
     justify-content: space-between;
@@ -384,12 +543,26 @@
     grid-template-columns: 38px minmax(0, 1fr);
   }
 
+  .details-activity-row {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
   .details-device-icon {
     width: 38px;
     height: 38px;
   }
 
+  .details-activity-icon {
+    width: 38px;
+    height: 38px;
+  }
+
   .details-device-state {
+    grid-column: 2;
+    justify-items: start;
+  }
+
+  .details-activity-meta {
     grid-column: 2;
     justify-items: start;
   }

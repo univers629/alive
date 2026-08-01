@@ -49,9 +49,9 @@
     <main class="details-shell">
         <section class="details-card details-hero">
             <div>
-                <span class="details-eyebrow">ALIVE OVERVIEW</span>
-                <h1>详情</h1>
-                <p id="details-summary">正在汇总当前状态、设备和互动数据…</p>
+                <span class="details-eyebrow">ALIVE ACTIVITY</span>
+                <h1>应用使用记录</h1>
+                <p id="details-summary">正在汇总应用活动、设备和互动数据…</p>
             </div>
             <div class="details-hero__stamp">
                 <span class="details-live-dot" aria-hidden="true"></span>
@@ -59,32 +59,55 @@
             </div>
         </section>
 
-        <section class="details-metrics" aria-label="访问与互动统计">
+        <section class="details-metrics" aria-label="应用与站点统计">
+            <article class="details-metric">
+                <span>今日使用</span>
+                <strong id="metric-activity-today">—</strong>
+                <small>已记录应用时长</small>
+            </article>
+            <article class="details-metric">
+                <span>活动记录</span>
+                <strong id="metric-activity-records">—</strong>
+                <small>历史累计</small>
+            </article>
+            <article class="details-metric">
+                <span>当前活动</span>
+                <strong id="metric-activity-active">—</strong>
+                <small>正在使用的应用</small>
+            </article>
+            <article class="details-metric">
+                <span>在线设备</span>
+                <strong id="metric-online">—</strong>
+                <small>公开设备实时状态</small>
+            </article>
             <article class="details-metric">
                 <span>今日访问</span>
                 <strong id="metric-daily">—</strong>
                 <small>主页打开次数</small>
             </article>
-            <article class="details-metric">
-                <span>本周访问</span>
-                <strong id="metric-weekly">—</strong>
-                <small>本周累计</small>
-            </article>
-            <article class="details-metric">
-                <span>本月访问</span>
-                <strong id="metric-monthly">—</strong>
-                <small>本月累计</small>
-            </article>
-            <article class="details-metric">
-                <span>历史访问</span>
-                <strong id="metric-total">—</strong>
-                <small>原有总次数逻辑</small>
-            </article>
-            <article class="details-metric">
-                <span>今日留言</span>
-                <strong id="metric-comments">—</strong>
-                <small id="metric-comments-total">历史 — 条</small>
-            </article>
+        </section>
+
+        <section class="details-card details-activities" aria-labelledby="details-activities-title">
+            <div class="details-section-head details-activities__head">
+                <div>
+                    <span class="details-eyebrow">RECENT ACTIVITIES</span>
+                    <h2 id="details-activities-title">最近应用活动</h2>
+                </div>
+                <div class="details-activity-controls">
+                    <div class="details-activity-tabs" role="tablist" aria-label="活动设备类型">
+                        <button type="button" data-activity-category="mobile" aria-selected="true">移动设备</button>
+                        <button type="button" data-activity-category="desktop" aria-selected="false">电脑</button>
+                    </div>
+                    <div class="details-activity-period">
+                        <span aria-hidden="true">◷</span>
+                        <span>近 24 小时</span>
+                        <b id="details-activity-record-count">0 条</b>
+                    </div>
+                </div>
+            </div>
+            <div class="details-activity-list" id="details-activity-list">
+                <p class="details-empty">正在读取应用活动…</p>
+            </div>
         </section>
 
         <div class="details-layout">
@@ -130,17 +153,11 @@
                     </dl>
                 </section>
 
-                <section class="details-card details-history">
-                    <span class="details-eyebrow">DAILY REPORT</span>
-                    <h2>日报与应用排行</h2>
-                    <p>当前客户端只上报“此刻正在做什么”，尚未保存应用开始与结束时间。因此这里不会用当前状态伪造使用时长。</p>
-                    <div class="details-history__next">
-                        <span>下一步数据链路</span>
-                        <ol>
-                            <li>客户端上报应用切换事件</li>
-                            <li>服务端闭合使用时段</li>
-                            <li>按日汇总时长与排行</li>
-                        </ol>
+                <section class="details-card details-history" aria-labelledby="details-ranking-title">
+                    <span class="details-eyebrow">TODAY RANKING</span>
+                    <h2 id="details-ranking-title">今日应用排行</h2>
+                    <div class="details-app-ranking" id="details-app-ranking">
+                        <p class="details-empty">等待应用活动上报…</p>
                     </div>
                 </section>
             </div>

@@ -513,7 +513,14 @@ def test_details_page_uses_real_metrics_and_sortable_device_snapshot():
                 "show_name": "Details Device",
                 "using": True,
                 "status": "Testing details",
-                "fields": {"platform": "Windows"},
+                "fields": {
+                    "platform": "Windows",
+                    "activity_reporting": True,
+                    "activity_device_type": "desktop",
+                    "activity_app_id": "code",
+                    "activity_app_name": "Visual Studio Code",
+                    "activity_title": "test_api.py - Alive",
+                },
             },
         )
         assert created.status_code == 200
@@ -524,14 +531,36 @@ def test_details_page_uses_real_metrics_and_sortable_device_snapshot():
         assert "glass-select.js" in page.text
         assert 'aria-current="page"' in page.text
         assert 'id="details-device-sort"' in page.text
-        assert "日报与应用排行" in page.text
+        assert "应用使用记录" in page.text
+        assert 'id="details-activity-list"' in page.text
         assert "details.js" in page.text
+
+        mobile_created = client.post(
+            "/api/device/set",
+            headers=headers,
+            json={
+                "id": "details-phone",
+                "show_name": "Details Phone",
+                "using": True,
+                "status": "Phone details",
+                "fields": {
+                    "activity_reporting": True,
+                    "activity_device_type": "mobile",
+                    "activity_app_id": "com.example.mobile",
+                    "activity_app_name": "Mobile App",
+                },
+            },
+        )
+        assert mobile_created.status_code == 200
 
         details = client.get("/api/details/query")
         assert details.status_code == 200
         payload = details.json()
         assert payload["success"] is True
-        assert payload["history_available"] is False
+        assert payload["history_available"] is True
+        assert payload["activity"]["total_records"] >= 1
+        assert payload["activity"]["categories"]["desktop"]["recent"][0]["app_name"] == "Visual Studio Code"
+        assert payload["activity"]["categories"]["mobile"]["recent"][0]["app_name"] == "Mobile App"
         assert payload["visits"]["total"] >= payload["visits"]["daily"]
         assert payload["device_counts"]["total"] >= 1
         assert any(device["id"] == "details-device" for device in payload["devices"])

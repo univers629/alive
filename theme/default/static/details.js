@@ -1,7 +1,10 @@
 (() => {
   const sortSelect = document.getElementById('details-device-sort');
   const deviceList = document.getElementById('details-device-list');
-  if (!sortSelect || !deviceList) return;
+  const activityList = document.getElementById('details-activity-list');
+  const appRanking = document.getElementById('details-app-ranking');
+  const activityTabs = [...document.querySelectorAll('[data-activity-category]')];
+  if (!sortSelect || !deviceList || !activityList || !appRanking) return;
 
   const deviceIcons = {
     desktop: '🖥️',
@@ -19,6 +22,7 @@
     offline: '离线',
   };
   let payload = null;
+  let selectedActivityCategory = 'mobile';
 
   function setText(id, value) {
     const element = document.getElementById(id);
@@ -31,6 +35,88 @@
     if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时前`;
     return `${Math.floor(seconds / 86400)} 天前`;
+  }
+
+  function formatDuration(seconds) {
+    const total = Math.max(0, Math.round(Number(seconds) || 0));
+    if (total < 60) return '不足 1 分钟';
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    return hours ? `${hours} 小时${minutes ? ` ${minutes} 分钟` : ''}` : `${minutes} 分钟`;
+  }
+
+  function formatActivityTime(timestamp) {
+    return new Intl.DateTimeFormat('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(Number(timestamp) * 1000));
+  }
+
+  function renderActivities(activity) {
+    const records = Array.isArray(activity?.recent) ? activity.recent : [];
+    activityList.replaceChildren();
+    setText('details-activity-record-count', `${records.length} 条`);
+    if (!records.length) {
+      const empty = document.createElement('p');
+      empty.className = 'details-empty';
+      empty.textContent = '还没有应用使用记录。新版桌面客户端开始上报后会在这里显示。';
+      activityList.append(empty);
+      return;
+    }
+    records.forEach((record) => {
+      const row = document.createElement('article');
+      row.className = 'details-activity-row';
+      const icon = document.createElement('span');
+      icon.className = 'details-activity-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = String(record.app_name || '?').trim().slice(0, 1).toUpperCase() || '?';
+
+      const copy = document.createElement('div');
+      copy.className = 'details-activity-copy';
+      const name = document.createElement('strong');
+      name.textContent = record.app_name || '未知应用';
+      const source = document.createElement('span');
+      source.textContent = record.device_type === 'mobile' ? '移动设备' : '电脑设备';
+      copy.append(name, source);
+
+      const meta = document.createElement('div');
+      meta.className = 'details-activity-meta';
+      const duration = document.createElement('strong');
+      duration.textContent = formatDuration(record.duration_seconds);
+      const when = document.createElement('time');
+      when.dateTime = new Date(Number(record.started_at) * 1000).toISOString();
+      when.textContent = record.active ? `使用中 · ${formatActivityTime(record.started_at)}` : formatActivityTime(record.started_at);
+      meta.append(duration, when);
+      row.append(icon, copy, meta);
+      activityList.append(row);
+    });
+  }
+
+  function renderAppRanking(activity) {
+    const apps = Array.isArray(activity?.top_apps) ? activity.top_apps : [];
+    appRanking.replaceChildren();
+    if (!apps.length) {
+      const empty = document.createElement('p');
+      empty.className = 'details-empty';
+      empty.textContent = '等待新版客户端记录今日使用时长。';
+      appRanking.append(empty);
+      return;
+    }
+    apps.forEach((app, index) => {
+      const row = document.createElement('div');
+      row.className = 'details-app-ranking__row';
+      const rank = document.createElement('b');
+      rank.textContent = String(index + 1).padStart(2, '0');
+      const name = document.createElement('span');
+      name.textContent = app.app_name || '未知应用';
+      const duration = document.createElement('strong');
+      duration.textContent = formatDuration(app.duration_seconds);
+      row.append(rank, name, duration);
+      appRanking.append(row);
+    });
   }
 
   function sortedDevices() {
@@ -116,12 +202,15 @@
         hour12: false,
       }).format(new Date(Number(payload.generated_at) * 1000)),
     );
+    const activity = payload.activity || { categories: {} };
+    const selectedActivity = activity.categories?.[selectedActivityCategory]
+      || { today_seconds: 0, total_records: 0, recent: [], top_apps: [] };
+    const activeActivities = selectedActivity.recent.filter((record) => record.active).length;
+    setText('metric-activity-today', formatDuration(selectedActivity.today_seconds));
+    setText('metric-activity-records', selectedActivity.total_records);
+    setText('metric-activity-active', activeActivities);
+    setText('metric-online', `${payload.device_counts.online} / ${payload.device_counts.total}`);
     setText('metric-daily', payload.visits.daily);
-    setText('metric-weekly', payload.visits.weekly);
-    setText('metric-monthly', payload.visits.monthly);
-    setText('metric-total', payload.visits.total);
-    setText('metric-comments', payload.comments.today);
-    setText('metric-comments-total', `历史 ${payload.comments.total} 条`);
 
     setText('device-active-count', payload.device_counts.active);
     setText('device-idle-count', payload.device_counts.idle);
@@ -135,6 +224,11 @@
         : '当前未播放',
     );
     setText('fact-comments', `${payload.comments.total} 条`);
+    activityTabs.forEach((tab) => {
+      tab.setAttribute('aria-selected', String(tab.dataset.activityCategory === selectedActivityCategory));
+    });
+    renderActivities(selectedActivity);
+    renderAppRanking(selectedActivity);
     renderDevices();
   }
 
@@ -149,10 +243,17 @@
     } catch (error) {
       setText('details-summary', '暂时无法读取详情数据，请稍后刷新。');
       deviceList.innerHTML = '<p class="details-empty">详情连接失败。</p>';
+      activityList.innerHTML = '<p class="details-empty">应用记录连接失败。</p>';
     }
   }
 
   sortSelect.addEventListener('change', renderDevices);
+  activityTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      selectedActivityCategory = tab.dataset.activityCategory === 'desktop' ? 'desktop' : 'mobile';
+      if (payload) render(payload);
+    });
+  });
   refresh();
   window.setInterval(() => {
     if (!document.hidden) refresh();
