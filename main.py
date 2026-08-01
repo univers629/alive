@@ -475,10 +475,13 @@ def static_proxy(request: Request, filename: str):
         if request.query_params.get("v")
         else "no-cache"
     )
+    headers = {"Cache-Control": cache_control}
+    if filename == "background-cache.js":
+        headers["Service-Worker-Allowed"] = "/"
     return FileResponse(
         file,
         media_type=guess_type(filename)[0],
-        headers={"Cache-Control": cache_control},
+        headers=headers,
     )
 
 
@@ -648,7 +651,7 @@ def query_response(include_meta: bool = False, include_metrics: bool = False) ->
     return result
 
 
-def details_response() -> dict:
+def details_response(activity_period: str = "daily", activity_date: str | None = None) -> dict:
     generated_at = time()
     timeout = c.status.device_timeout
     devices = []
@@ -672,7 +675,7 @@ def details_response() -> dict:
     }
     health = d.health_state
     music = d.music_state
-    activity = d.activity_snapshot(timeout)
+    activity = d.activity_snapshot(timeout, activity_period, activity_date)
     _, status = d.status
 
     online_count = state_counts["active"] + state_counts["idle"]
@@ -697,8 +700,9 @@ def details_response() -> dict:
         )
     else:
         summary_parts.append("当前没有公开的音乐会话")
+    activity_period_name = {"daily": "今日", "weekly": "本周", "monthly": "本月"}.get(activity["period"], "当前周期")
     if activity["today_seconds"]:
-        summary_parts.append(f"今日已记录应用使用 {int(activity['today_seconds'] // 60)} 分钟")
+        summary_parts.append(f"{activity_period_name}已记录应用使用 {int(activity['today_seconds'] // 60)} 分钟")
     else:
         summary_parts.append("等待支持应用记录的客户端上报首条活动")
     summary_parts.append(
@@ -742,8 +746,8 @@ def query(meta: str | None = None, metrics: str | None = None):
     tags=["公开读取 / Public reads"],
     summary="获取详情页统计、设备排序数据和情况总结",
 )
-def details_query():
-    return details_response()
+def details_query(period: str = "daily", date: str | None = None):
+    return details_response(period, date)
 
 
 async def _event_stream(request: Request, event_id: int):

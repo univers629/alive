@@ -457,6 +457,14 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         versioned_asset = client.get("/static/main.css?v=test", follow_redirects=False)
         assert versioned_asset.status_code == 200
         assert versioned_asset.headers["cache-control"] == "public, max-age=31536000, immutable"
+        background_worker = client.get("/static/background-cache.js?v=test", follow_redirects=False)
+        assert background_worker.status_code == 200
+        assert background_worker.headers["service-worker-allowed"] == "/"
+        assert "alive-image-cache-v1" in background_worker.text
+
+        home = client.get("/")
+        assert "background-cache.js" in home.text
+        assert "serviceWorker.register" in home.text
 
         mode_css = client.get("/static/color-mode.css").text
         assert 'content: "☀";' in mode_css
@@ -541,6 +549,7 @@ def test_details_page_uses_real_metrics_and_sortable_device_snapshot():
                     "activity_device_type": "desktop",
                     "activity_app_id": "code",
                     "activity_app_name": "Visual Studio Code",
+                    "activity_app_icon_url": "/app-icons/code.png",
                     "activity_title": "test_api.py - Alive",
                 },
             },
@@ -582,7 +591,16 @@ def test_details_page_uses_real_metrics_and_sortable_device_snapshot():
         assert payload["history_available"] is True
         assert payload["activity"]["total_records"] >= 1
         assert payload["activity"]["categories"]["desktop"]["recent"][0]["app_name"] == "Visual Studio Code"
+        assert payload["activity"]["categories"]["desktop"]["recent"][0]["app_icon_url"] == "/app-icons/code.png"
         assert payload["activity"]["categories"]["mobile"]["recent"][0]["app_name"] == "Mobile App"
+        weekly = client.get("/api/details/query?period=weekly")
+        assert weekly.status_code == 200
+        weekly_activity = weekly.json()["activity"]
+        assert weekly_activity["period"] == "weekly"
+        assert len(weekly_activity["categories"]["desktop"]["time_series"]) == 7
+        monthly = client.get("/api/details/query?period=monthly")
+        assert monthly.status_code == 200
+        assert len(monthly.json()["activity"]["categories"]["mobile"]["time_series"]) >= 28
         assert payload["visits"]["total"] >= payload["visits"]["daily"]
         assert payload["device_counts"]["total"] >= 1
         assert any(device["id"] == "details-device" for device in payload["devices"])

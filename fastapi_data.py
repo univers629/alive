@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
 import hmac
 from io import BytesIO
@@ -60,6 +60,7 @@ class _AppActivityData(Base):
     device_type: Mapped[str] = mapped_column(String(24), nullable=False, default="desktop", index=True)
     app_key: Mapped[str] = mapped_column(String(240), nullable=False, index=True)
     app_name: Mapped[str] = mapped_column(String(240), nullable=False, default="")
+    app_icon_url: Mapped[str] = mapped_column(String(LIMIT), nullable=False, default="")
     window_title: Mapped[str] = mapped_column(Text, nullable=False, default="")
     started_at: Mapped[float] = mapped_column(Float, nullable=False, default=time, index=True)
     ended_at: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -262,6 +263,8 @@ class Data:
             activity_columns = {column["name"] for column in inspect(self.engine).get_columns("app_activities")}
             if "device_type" not in activity_columns:
                 connection.execute(text("ALTER TABLE app_activities ADD COLUMN device_type VARCHAR(24) NOT NULL DEFAULT 'desktop'"))
+            if "app_icon_url" not in activity_columns:
+                connection.execute(text("ALTER TABLE app_activities ADD COLUMN app_icon_url VARCHAR(1024) NOT NULL DEFAULT ''"))
             # App activity records intentionally retain only app identity and time.
             # Remove titles saved by the first preview implementation.
             connection.execute(text("UPDATE app_activities SET window_title = '' WHERE window_title <> ''"))
@@ -622,6 +625,7 @@ class Data:
         )
         app_key = str(fields.get("activity_app_id") or "").strip()[:240]
         app_name = str(fields.get("activity_app_name") or "").strip()[:240]
+        app_icon_url = str(fields.get("activity_app_icon_url") or fields.get("app_icon_url") or "").strip()[:LIMIT]
         device_type = str(fields.get("activity_device_type") or "desktop").strip().lower()[:24]
 
         if not using or not app_key:
@@ -635,6 +639,8 @@ class Data:
             current.device_type = device_type
             if app_name:
                 current.app_name = app_name
+            if app_icon_url:
+                current.app_icon_url = app_icon_url
             return
 
         if current is not None:
@@ -646,80 +652,132 @@ class Data:
                 device_type=device_type,
                 app_key=app_key,
                 app_name=app_name or app_key,
+                app_icon_url=app_icon_url,
                 window_title="",
                 started_at=now,
                 last_seen_at=now,
             )
         )
 
-    def activity_snapshot(self, timeout: float = 60) -> dict[str, Any]:
-        """Return separate mobile and desktop foreground-app intervals for details."""
-        now = time()
-        grace = max(15.0, float(timeout) if timeout > 0 else 75.0)
+    @staticmethod
+    def _activity_category(device_type: str) -> str:
+        return "mobile" if device_type in {"mobile", "phone", "tablet", "watch"} else "desktop"
+
+    def activity_snapshot(
+        self,
+        timeout: float = 60,
+        period: str = "daily",
+        selected_date: str | None = None,
+    ) -> dict[str, Any]:
+        """Return period-aware application statistics without mixing mobile and desktop."""
+        period = period if period in {"daily", "weekly", "monthly"} else "daily"
         timezone = pytz.timezone(self._c.main.timezone)
-        today_start = datetime.now(timezone).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        local_now = datetime.now(timezone)
+        try:
+            selected = timezone.localize(datetime.strptime(selected_date or "", "%Y-%m-%d"))
+        except ValueError:
+            selected = local_now
+        selected = min(selected, local_now)
+        if period == "daily":
+            range_start_local = selected.replace(hour=0, minute=0, second=0, microsecond=0)
+            range_end_local = range_start_local + timedelta(days=1)
+            labels = [f"{hour:02d}" for hour in range(24)]
+        elif period == "weekly":
+            range_start_local = (selected - timedelta(days=selected.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+            range_end_local = range_start_local + timedelta(days=7)
+            labels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+        else:
+            range_start_local = selected.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            next_month = (range_start_local.replace(day=28) + timedelta(days=4)).replace(day=1)
+            range_end_local = next_month
+            labels = [str(day) for day in range(1, (range_end_local - range_start_local).days + 1)]
+        range_start = range_start_local.timestamp()
+        range_end = min(range_end_local.timestamp(), time())
+        grace = max(15.0, float(timeout) if timeout > 0 else 75.0)
+        now = time()
+
         with self.session() as session:
-            recent_rows = session.scalars(
+            rows = session.scalars(
                 select(_AppActivityData)
+                .where(_AppActivityData.started_at < range_end, _AppActivityData.last_seen_at >= range_start)
                 .order_by(_AppActivityData.last_seen_at.desc(), _AppActivityData.id.desc())
-                .limit(80)
-            ).all()
-            today_rows = session.scalars(
-                select(_AppActivityData)
-                .where(_AppActivityData.last_seen_at >= today_start)
-                .order_by(_AppActivityData.started_at.desc())
             ).all()
             count_rows = session.execute(
                 select(_AppActivityData.device_type, func.count()).group_by(_AppActivityData.device_type)
             ).all()
 
-        def category_for(device_type: str) -> str:
-            return "mobile" if device_type in {"mobile", "phone", "tablet", "watch"} else "desktop"
-
-        def serialize(row: _AppActivityData) -> dict[str, Any]:
-            active = row.ended_at is None and row.last_seen_at + grace >= now
-            effective_end = row.ended_at if row.ended_at is not None else min(now, row.last_seen_at + grace)
-            return {
-                "id": row.id,
-                "device_id": row.device_id,
-                "device_type": category_for(row.device_type),
-                "app_name": row.app_name or row.app_key,
-                "started_at": row.started_at,
-                "ended_at": effective_end,
-                "duration_seconds": max(0.0, effective_end - row.started_at),
-                "active": active,
-            }
-
         categories: dict[str, dict[str, Any]] = {
-            "mobile": {"today_seconds": 0.0, "recent": [], "top_apps": [], "total_records": 0},
-            "desktop": {"today_seconds": 0.0, "recent": [], "top_apps": [], "total_records": 0},
+            category: {
+                "period_seconds": 0, "today_seconds": 0, "recent": [], "top_apps": [],
+                "total_records": 0, "time_series": [{"label": label, "seconds": 0} for label in labels],
+            }
+            for category in ("mobile", "desktop")
         }
         app_totals: dict[str, dict[str, dict[str, Any]]] = {"mobile": {}, "desktop": {}}
         for device_type, count in count_rows:
-            categories[category_for(device_type)]["total_records"] += int(count)
-        for row in recent_rows:
-            category = category_for(row.device_type)
+            categories[self._activity_category(device_type)]["total_records"] += int(count)
+
+        for row in rows:
+            category = self._activity_category(row.device_type)
+            effective_end = row.ended_at if row.ended_at is not None else min(now, row.last_seen_at + grace)
+            clipped_start, clipped_end = max(range_start, row.started_at), min(range_end, effective_end)
+            overlap = max(0.0, clipped_end - clipped_start)
+            if overlap <= 0:
+                continue
+            active = row.ended_at is None and row.last_seen_at + grace >= now
+            record = {
+                "id": row.id,
+                "device_id": row.device_id,
+                "device_type": category,
+                "app_name": row.app_name or row.app_key,
+                "app_icon_url": row.app_icon_url or "",
+                "started_at": row.started_at,
+                "ended_at": effective_end,
+                "duration_seconds": round(overlap),
+                "active": active,
+            }
             if len(categories[category]["recent"]) < 30:
-                categories[category]["recent"].append(serialize(row))
-        for row in today_rows:
-            serialized = serialize(row)
-            overlap = max(0.0, float(serialized["ended_at"]) - max(today_start, row.started_at))
-            category = serialized["device_type"]
-            categories[category]["today_seconds"] += overlap
-            key = row.app_key
-            item = app_totals[category].setdefault(key, {"app_name": serialized["app_name"], "duration_seconds": 0.0})
+                categories[category]["recent"].append(record)
+            categories[category]["period_seconds"] += overlap
+            item = app_totals[category].setdefault(
+                row.app_key,
+                {"app_name": record["app_name"], "app_icon_url": record["app_icon_url"], "duration_seconds": 0.0},
+            )
             item["duration_seconds"] += overlap
+            if record["app_icon_url"]:
+                item["app_icon_url"] = record["app_icon_url"]
+
+            cursor = clipped_start
+            while cursor < clipped_end:
+                cursor_local = datetime.fromtimestamp(cursor, timezone)
+                if period == "daily":
+                    index = cursor_local.hour
+                    next_bucket = (cursor_local.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)).timestamp()
+                elif period == "weekly":
+                    index = cursor_local.weekday()
+                    next_bucket = (cursor_local.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).timestamp()
+                else:
+                    index = cursor_local.day - 1
+                    next_bucket = (cursor_local.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).timestamp()
+                piece_end = min(clipped_end, next_bucket)
+                categories[category]["time_series"][index]["seconds"] += max(0.0, piece_end - cursor)
+                cursor = piece_end
 
         for category, data in categories.items():
-            data["today_seconds"] = round(data["today_seconds"])
+            data["period_seconds"] = round(data["period_seconds"])
+            data["today_seconds"] = data["period_seconds"]
+            data["time_series"] = [{**item, "seconds": round(item["seconds"])} for item in data["time_series"]]
             data["top_apps"] = [
                 {**item, "duration_seconds": round(item["duration_seconds"])}
-                for item in sorted(app_totals[category].values(), key=lambda item: item["duration_seconds"], reverse=True)[:5]
+                for item in sorted(app_totals[category].values(), key=lambda item: item["duration_seconds"], reverse=True)[:12]
             ]
-        total_records = sum(category["total_records"] for category in categories.values())
         return {
-            "today_seconds": sum(category["today_seconds"] for category in categories.values()),
-            "total_records": int(total_records),
+            "period": period,
+            "range_start": range_start,
+            "range_end": range_end,
+            "date_label": range_start_local.strftime("%Y 年 %m 月 %d 日") if period == "daily" else range_start_local.strftime("%Y 年 %m 月") if period == "monthly" else f"{range_start_local.strftime('%m/%d')} – {(range_start_local + timedelta(days=6)).strftime('%m/%d')}",
+            "today_seconds": sum(category["period_seconds"] for category in categories.values()),
+            "total_records": sum(category["total_records"] for category in categories.values()),
             "categories": categories,
         }
 

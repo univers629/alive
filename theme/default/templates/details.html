@@ -20,6 +20,7 @@
     <title>{{ page_title }}</title>
     <meta name="description" content="{{ page_desc }}">
     <link rel="icon" href="{{ page_favicon }}">
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('{{ url_for('static', filename='background-cache.js') }}', { scope: '/' }).catch(() => {});</script>
     <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='page-shell.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}">
@@ -61,7 +62,7 @@
 
         <section class="details-metrics" aria-label="应用与站点统计">
             <article class="details-metric">
-                <span>今日使用</span>
+                <span id="metric-activity-period-name">今日使用</span>
                 <strong id="metric-activity-today">—</strong>
                 <small>已记录应用时长</small>
             </article>
@@ -98,12 +99,31 @@
                         <button type="button" data-activity-category="mobile" aria-selected="true">移动设备</button>
                         <button type="button" data-activity-category="desktop" aria-selected="false">电脑</button>
                     </div>
+                    <div class="details-activity-tabs" role="tablist" aria-label="统计周期">
+                        <button type="button" data-activity-period="daily" aria-selected="true">日</button>
+                        <button type="button" data-activity-period="weekly" aria-selected="false">周</button>
+                        <button type="button" data-activity-period="monthly" aria-selected="false">月</button>
+                    </div>
                     <div class="details-activity-period">
-                        <span aria-hidden="true">◷</span>
-                        <span>近 24 小时</span>
+                        <button type="button" class="details-period-nav" id="details-period-prev" aria-label="上一周期">‹</button>
+                        <span id="details-activity-period-label">今天</span>
+                        <button type="button" class="details-period-nav" id="details-period-next" aria-label="下一周期">›</button>
                         <b id="details-activity-record-count">0 条</b>
                     </div>
                 </div>
+            </div>
+            <div class="details-charts" aria-label="应用使用统计图表">
+                <section class="details-chart-panel">
+                    <div class="details-chart-title"><strong>应用占比</strong><span>按使用时长</span></div>
+                    <div class="details-donut-wrap">
+                        <div class="details-donut" id="details-app-donut"><div><strong id="details-donut-total">—</strong><span>总使用</span></div></div>
+                        <div class="details-donut-legend" id="details-donut-legend"></div>
+                    </div>
+                </section>
+                <section class="details-chart-panel">
+                    <div class="details-chart-title"><strong>使用时段</strong><span id="details-trend-caption">按小时</span></div>
+                    <div class="details-usage-bars" id="details-usage-bars"></div>
+                </section>
             </div>
             <div class="details-activity-list" id="details-activity-list">
                 <p class="details-empty">正在读取应用活动…</p>

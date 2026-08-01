@@ -20,6 +20,7 @@
     <title>{{ page_title }}</title>
     <meta name="description" content="{{ page_desc }}">
     <link rel="icon" href="{{ page_favicon }}">
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('{{ url_for('static', filename='background-cache.js') }}', { scope: '/' }).catch(() => {});</script>
     <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='page-shell.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}">

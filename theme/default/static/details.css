@@ -184,9 +184,22 @@
   white-space: nowrap;
 }
 
-.details-activity-period > span:first-child {
+.details-period-nav {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
   color: var(--alive-accent);
-  font-size: .95rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  font: 800 1.1rem/1 "Segoe UI Variable", sans-serif;
+  cursor: pointer;
+}
+
+.details-period-nav:hover {
+  background: var(--alive-border-soft);
 }
 
 .details-activity-period b {
@@ -200,6 +213,154 @@
   display: grid;
   gap: 9px;
   margin-top: 17px;
+}
+
+.details-charts {
+  display: grid;
+  grid-template-columns: minmax(260px, .95fr) minmax(300px, 1.05fr);
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.details-chart-panel {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 18px;
+  background: var(--alive-surface-soft);
+}
+
+.details-chart-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.details-chart-title strong {
+  font: 700 .8rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.details-chart-title span {
+  color: var(--alive-faint);
+  font: 560 .64rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.details-donut-wrap {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  align-items: center;
+  gap: 15px;
+  min-height: 146px;
+}
+
+.details-donut {
+  display: grid;
+  place-items: center;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  background: conic-gradient(var(--alive-border-soft) 0 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
+}
+
+.details-donut > div {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  padding: 4px;
+  border-radius: 50%;
+  background: var(--alive-panel);
+  text-align: center;
+}
+
+.details-donut strong,
+.details-donut span {
+  display: block;
+}
+
+.details-donut strong {
+  max-width: 69px;
+  overflow: hidden;
+  color: var(--alive-ink);
+  font: 760 .66rem/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details-donut span {
+  margin-top: 3px;
+  color: var(--alive-faint);
+  font: 550 .58rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.details-donut-legend {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.details-donut-legend__row {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  font: 580 .66rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.details-donut-legend__row i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.details-donut-legend__row span {
+  overflow: hidden;
+  color: var(--alive-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details-donut-legend__row b {
+  color: var(--alive-ink);
+  font-weight: 700;
+}
+
+.details-usage-bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(6px, 1fr);
+  align-items: end;
+  gap: 4px;
+  height: 146px;
+  padding-top: 17px;
+}
+
+.details-usage-bar {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 13px;
+  align-items: end;
+  min-width: 0;
+  height: 100%;
+}
+
+.details-usage-bar i {
+  min-height: 1px;
+  border-radius: 5px 5px 2px 2px;
+  background: linear-gradient(180deg, #45c7ff, var(--alive-accent));
+  box-shadow: 0 4px 10px rgba(72, 130, 255, .22);
+  transition: height 260ms ease;
+}
+
+.details-usage-bar span {
+  display: block;
+  margin-top: 5px;
+  overflow: visible;
+  color: var(--alive-faint);
+  font: 560 .56rem/1 "Segoe UI Variable", sans-serif;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .details-activity-row {
@@ -224,6 +385,13 @@
   background: linear-gradient(135deg, var(--alive-accent), #5bc9ff);
   box-shadow: 0 8px 18px rgba(89, 130, 255, .18);
   font: 760 1rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.details-activity-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .details-activity-copy {
@@ -497,6 +665,10 @@
     grid-template-columns: 1fr;
   }
 
+  .details-charts {
+    grid-template-columns: 1fr;
+  }
+
   .details-side {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -532,6 +704,10 @@
   .details-activity-controls {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .details-charts {
+    gap: 9px;
   }
 
   .details-sort {
