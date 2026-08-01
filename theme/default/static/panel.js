@@ -4,9 +4,11 @@ let currentStatus = { 'color': 'sleeping', 'desc': '', 'id': -1, 'name': '未知
 let deviceData = {};
 let commentsData = [];
 let privateMode = false;
+let panelLoadSequence = 0;
 let displaySettings = {
     visit_display_mode: 'total',
     danmaku_enabled: true,
+    health_section_enabled: true,
     comment_display_limit: 8,
     danmaku_replay_count: 1,
     danmaku_replay_interval: 30,
@@ -49,30 +51,49 @@ async function postJSON(url, body = {}) {
     });
 }
 
+function setPanelLoading(loading, message = '') {
+    const status = document.getElementById('panel-loading-status');
+    document.body.dataset.loading = loading ? 'true' : 'false';
+    document.body.setAttribute('aria-busy', String(loading));
+    if (status) status.textContent = message;
+}
+
 // 初始化页面
 async function initPage() {
+    const loadSequence = ++panelLoadSequence;
+    setPanelLoading(true, '正在同步状态、设备和评论…');
     try {
-        // 获取状态列表
-        const statusResponse = await fetch('/api/status/list');
-        statusListResp = await statusResponse.json();
+        const [statusResponse, queryResponse] = await Promise.all([
+            fetch('/api/status/list', { headers: { Accept: 'application/json' }, cache: 'no-store' }),
+            fetch('/api/admin/snapshot', {
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+                cache: 'no-store',
+            }),
+        ]);
+        if (!statusResponse.ok || !queryResponse.ok) {
+            throw new Error('后台会话已失效或服务器暂时不可用');
+        }
+        const [statusListResp, queryData] = await Promise.all([
+            statusResponse.json(),
+            queryResponse.json(),
+        ]);
+        if (loadSequence !== panelLoadSequence) return;
         statusList = statusListResp.status_list;
-        console.debug(`got statusList: ${statusList}`);
-        renderStatusSelector();
-
-        // 获取当前状态和设备信息
-        const queryResponse = await fetch('/api/admin/snapshot', { credentials: 'same-origin' });
-        const queryData = await queryResponse.json();
         currentStatus = queryData.status;
         deviceData = queryData.devices;
         commentsData = queryData.comments || [];
         privateMode = queryData.private_mode || false;
         displaySettings = queryData.settings || displaySettings;
 
-        // 更新UI
+        // 在同一帧内更新 UI，避免按接口响应顺序反复重排。
+        renderStatusSelector();
         updateCurrentStatus();
         renderDeviceList();
         renderComments();
         document.getElementById('private-mode-toggle').checked = privateMode;
+        const healthSectionToggle = document.getElementById('health-section-toggle');
+        if (healthSectionToggle) healthSectionToggle.checked = displaySettings.health_section_enabled !== false;
         const visitDisplayMode = document.getElementById('visit-display-mode');
         if (visitDisplayMode) {
             visitDisplayMode.value = displaySettings.visit_display_mode || 'total';
@@ -103,10 +124,13 @@ async function initPage() {
         if (offlineStatusLabel) offlineStatusLabel.textContent = `${statusList[1]?.name || '离线'}状态文案`;
         // 如果启用了统计功能，获取统计数据
         if (document.getElementById('metrics-container')) {
-            await fetchMetrics();
+            void fetchMetrics();
         }
+        setPanelLoading(false, '');
     } catch (error) {
+        if (loadSequence !== panelLoadSequence) return;
         console.error('初始化失败:', error);
+        setPanelLoading(false, '加载失败，可点击“刷新数据”重试。');
         alert(`加载数据失败，请检查网络连接或重新登录\n${error}`);
     }
 }
@@ -656,6 +680,20 @@ async function togglePrivateMode(isPrivate) {
     }
 }
 
+async function toggleHealthSection(enabled) {
+    const toggle = document.getElementById('health-section-toggle');
+    try {
+        const response = await postJSON('/api/admin/settings', { health_section_enabled: enabled });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || data.details || '保存失败');
+        displaySettings = data.settings;
+    } catch (error) {
+        console.error('切换身体数据区域失败:', error);
+        if (toggle) toggle.checked = displaySettings.health_section_enabled !== false;
+        alert(`切换身体数据区域失败：${error.message || error}`);
+    }
+}
+
 // 获取统计数据
 async function fetchMetrics() {
     try {
@@ -789,6 +827,12 @@ document.addEventListener('DOMContentLoaded', function () {
             togglePrivateMode(this.checked);
         });
     }
+    const healthSectionToggle = document.getElementById('health-section-toggle');
+    if (healthSectionToggle) {
+        healthSectionToggle.addEventListener('change', function () {
+            toggleHealthSection(this.checked);
+        });
+    }
 
     const saveDisplaySettingsBtn = document.getElementById('save-display-settings-btn');
     if (saveDisplaySettingsBtn) {
@@ -837,7 +881,7 @@ document.addEventListener('DOMContentLoaded', function () {
             target.removeAttribute('onclick');
         }
     });
-});
 
-// 初始化页面
-window.onload = initPage;
+    // 不等待背景图、头像等非关键资源，先请求后台数据。
+    void initPage();
+});

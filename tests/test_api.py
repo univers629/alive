@@ -663,6 +663,7 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
             json={
                 "visit_display_mode": "monthly",
                 "danmaku_enabled": False,
+                "health_section_enabled": False,
                 "comment_display_limit": 12,
                 "danmaku_replay_count": 3,
                 "danmaku_replay_interval": 45,
@@ -680,6 +681,7 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert settings.status_code == 200
         assert settings.json()["visit_metric"]["mode"] == "monthly"
         assert settings.json()["settings"]["danmaku_enabled"] is False
+        assert settings.json()["settings"]["health_section_enabled"] is False
         assert settings.json()["settings"]["comment_display_limit"] == 12
         assert settings.json()["settings"]["danmaku_replay_count"] == 3
         assert settings.json()["settings"]["danmaku_replay_interval"] == 45
@@ -692,6 +694,7 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert settings.json()["settings"]["music_library"] == str((tmp_path / "music").resolve())
         assert client.get("/api/status/query").json()["visit_metric"]["mode"] == "monthly"
         assert "Codex's" in client.get("/").text
+        assert 'id="health-overview" aria-labelledby="health-overview-title"\n    hidden>' in client.get("/").text
         assert "https://github.com/univers629" in client.get("/").text
         assert "<title>Codex Status</title>" in client.get("/").text
         assert "<title>Codex Status · 详情</title>" in client.get("/details").text
@@ -754,6 +757,7 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
             json={
                 "visit_display_mode": "total",
                 "danmaku_enabled": True,
+                "health_section_enabled": True,
                 "comment_display_limit": 8,
                 "danmaku_replay_count": 1,
                 "danmaku_replay_interval": 30,
@@ -795,6 +799,8 @@ def test_admin_uses_signed_session_and_post_actions():
         assert "glass-select.js" in panel.text
         assert 'id="color-mode-toggle"' in panel.text
         assert "ALIVE CONTROL CENTER" in panel.text
+        assert 'data-loading="true" aria-busy="true"' in panel.text
+        assert 'id="panel-loading-status"' in panel.text
         assert 'class="device-table-wrap"' in panel.text
         assert 'id="music-account-status"' not in panel.text
         assert 'id="music-credential-value"' not in panel.text
@@ -806,6 +812,11 @@ def test_admin_uses_signed_session_and_post_actions():
         assert "background: transparent;" in panel_css
         assert ".device-table-wrap::-webkit-scrollbar-track {" in panel_css
         assert "scrollbar-color:" in panel_css
+        assert 'body.admin-panel[data-loading="true"] .panel-card' in panel_css
+        panel_js = client.get("/static/panel.js").text
+        assert "const [statusResponse, queryResponse] = await Promise.all([" in panel_js
+        assert "window.onload = initPage" not in panel_js
+        assert "void initPage();" in panel_js
 
         verify = client.post("/panel/verify", json={})
         assert verify.status_code == 200

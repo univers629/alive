@@ -206,6 +206,11 @@ function updateDeviceStatus(data) {
     const lastUpdatedElement = document.getElementById('last-updated');
     const visitMetric = data.visit_metric;
     const onlineViewerCount = document.getElementById('online-viewer-count');
+    const healthOverview = document.getElementById('health-overview');
+
+    if (healthOverview && typeof data.health_section_enabled === 'boolean') {
+        healthOverview.hidden = !data.health_section_enabled;
+    }
 
     if (onlineViewerCount && Number.isFinite(Number(data.online_viewers))) {
         onlineViewerCount.textContent = String(Math.max(0, Number(data.online_viewers)));

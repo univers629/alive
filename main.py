@@ -404,6 +404,7 @@ def index(request: Request):
         dirname="cards",
         username=d.page_name,
         status=d.status_dict[1],
+        health_section_enabled=d.health_section_enabled,
         profile_avatar=profile_avatar_url(),
         social_links=_social_links(),
         last_updated=datetime.fromtimestamp(d.last_updated, tz).strftime("%Y-%m-%d %H:%M:%S %Z"),
@@ -596,6 +597,7 @@ def metadata_response() -> dict:
         "metrics": c.metrics.enabled,
         "public_settings": {
             "visit_display_mode": d.visit_display_mode,
+            "health_section_enabled": d.health_section_enabled,
         },
         "framework": "FastAPI",
     }
@@ -620,6 +622,7 @@ def query_response(include_meta: bool = False, include_metrics: bool = False) ->
         "status": status.model_dump(),
         "device": d.device_list,
         "health": d.health_state,
+        "health_section_enabled": d.health_section_enabled,
         "music": d.music_state,
         "visit_metric": d.public_visit_metric,
         "online_viewers": _active_viewers,
@@ -1270,6 +1273,7 @@ def admin_snapshot():
         "settings": {
             "visit_display_mode": d.visit_display_mode,
             "danmaku_enabled": d.danmaku_enabled,
+            "health_section_enabled": d.health_section_enabled,
             "comment_display_limit": d.comment_display_limit,
             "danmaku_replay_count": d.danmaku_replay_count,
             "danmaku_replay_interval": d.danmaku_replay_interval,
@@ -1303,6 +1307,12 @@ async def admin_settings(request: Request):
         if enabled is None:
             raise u.APIUnsuccessful(400, "danmaku_enabled must be boolean")
         d.set_runtime_setting("danmaku_enabled", "true" if enabled else "false")
+    if "health_section_enabled" in body:
+        raw = body["health_section_enabled"]
+        enabled = raw if isinstance(raw, bool) else u.tobool(raw)
+        if enabled is None:
+            raise u.APIUnsuccessful(400, "health_section_enabled must be boolean")
+        d.set_runtime_setting("health_section_enabled", "true" if enabled else "false")
     for key, minimum, maximum in (
         ("comment_display_limit", 1, 50),
         ("danmaku_replay_count", 1, 10),
@@ -1357,6 +1367,7 @@ async def admin_settings(request: Request):
         "settings": {
             "visit_display_mode": d.visit_display_mode,
             "danmaku_enabled": d.danmaku_enabled,
+            "health_section_enabled": d.health_section_enabled,
             "comment_display_limit": d.comment_display_limit,
             "danmaku_replay_count": d.danmaku_replay_count,
             "danmaku_replay_interval": d.danmaku_replay_interval,

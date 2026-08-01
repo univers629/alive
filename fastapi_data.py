@@ -604,6 +604,7 @@ class Data:
     def set_runtime_setting(self, key: str, value: str) -> None:
         if key not in {
             "danmaku_enabled",
+            "health_section_enabled",
             "comment_display_limit",
             "danmaku_replay_count",
             "danmaku_replay_interval",
@@ -626,6 +627,10 @@ class Data:
     @property
     def danmaku_enabled(self) -> bool:
         return self.runtime_setting("danmaku_enabled", "true") == "true"
+
+    @property
+    def health_section_enabled(self) -> bool:
+        return self.runtime_setting("health_section_enabled", "true") == "true"
 
     def _runtime_int(self, key: str, default: int, minimum: int, maximum: int) -> int:
         try:

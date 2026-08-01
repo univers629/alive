@@ -67,6 +67,20 @@ body.admin-panel {
   letter-spacing: -.025em;
 }
 
+.panel-loading-status {
+  min-height: 1.2em;
+  margin: 8px 0 0;
+  color: var(--alive-muted);
+  font: 520 .72rem/1.35 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.panel-loading-status:empty { display: none; }
+
+body.admin-panel[data-loading="true"] .panel-card {
+  opacity: .76;
+  transition: opacity 180ms ease;
+}
+
 .panel-card {
   margin-bottom: 14px;
   padding: clamp(18px, 3vw, 25px);

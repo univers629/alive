@@ -78,7 +78,8 @@
         <div class="device-grid__empty">正在读取设备状态…</div>
     </div>
 </section>
-<section class="health-overview" aria-labelledby="health-overview-title">
+<section class="health-overview" id="health-overview" aria-labelledby="health-overview-title"
+    {% if not health_section_enabled %}hidden{% endif %}>
     <div class="health-overview__header">
         <div>
             <span class="device-overview__eyebrow">BODY STATUS</span>
