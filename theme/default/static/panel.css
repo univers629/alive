@@ -721,6 +721,33 @@ input[type="checkbox"] {
   background: transparent;
 }
 
+.music-library-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.music-library-tools .panel-input {
+  min-width: min(100%, 320px);
+}
+
+.music-library-scroll {
+  max-height: 570px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.music-library-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.music-library-scroll .music-library-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
 .device-list {
   width: 100%;
   min-width: 900px;

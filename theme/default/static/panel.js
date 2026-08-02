@@ -6,6 +6,7 @@ let deviceOrder = [];
 let commentsData = [];
 let privateMode = false;
 let musicLibraryData = null;
+let musicLibrarySearchTimer = null;
 let panelLoadSequence = 0;
 let displaySettings = {
     visit_display_mode: 'total',
@@ -88,24 +89,27 @@ function renderMusicLibrary() {
         summary.textContent = '音乐库暂未加载。';
         return;
     }
-    summary.textContent = `共 ${library.total_files || 0} 个文件，${formatMusicBytes(library.total_bytes)}${library.truncated ? '；列表仅显示最近 1000 个' : ''}`;
+    const allTracks = Array.isArray(library.tracks) ? library.tracks : [];
+    const query = String(library.search || '').trim();
+    summary.textContent = query
+        ? `找到 ${library.total_files || 0} 首匹配歌曲${library.truncated ? '；仅显示前 1000 首' : ''}`
+        : `共 ${library.total_files || 0} 个文件，${formatMusicBytes(library.total_bytes)}${library.truncated ? '；列表仅显示最近 1000 个' : ''}`;
     body.replaceChildren();
-    const tracks = Array.isArray(library.tracks) ? library.tracks : [];
-    if (!tracks.length) {
+    if (!allTracks.length) {
         const row = document.createElement('tr');
         const cell = document.createElement('td');
-        cell.colSpan = 8;
+        cell.colSpan = 7;
         cell.className = 'empty-row';
         cell.textContent = '音乐库暂无已上传文件。';
         row.appendChild(cell);
         body.appendChild(row);
         return;
     }
-    tracks.forEach((track) => {
+    allTracks.forEach((track) => {
         const row = document.createElement('tr');
         const values = [
             track.title || '未记录', track.artist || '未记录', track.album || '—',
-            track.library_path, formatMusicBytes(track.size), formatMusicTime(track.modified_at),
+            formatMusicBytes(track.size), formatMusicTime(track.modified_at),
             track.active ? '当前使用中' : '可删除'
         ];
         values.forEach((value) => {
@@ -127,10 +131,12 @@ function renderMusicLibrary() {
 }
 
 async function refreshMusicLibrary() {
+    const search = String(document.getElementById('music-library-search')?.value || '').trim();
     const summary = document.getElementById('music-library-summary');
     if (summary) summary.textContent = '正在读取已上传音乐…';
     try {
-        const response = await fetch('/api/admin/music/library', {
+        const query = search ? `?search=${encodeURIComponent(search)}` : '';
+        const response = await fetch(`/api/admin/music/library${query}`, {
             credentials: 'same-origin', headers: { Accept: 'application/json' }, cache: 'no-store'
         });
         const data = await response.json();
@@ -149,8 +155,7 @@ async function deleteMusicTracks(paths) {
         const response = await postJSON('/api/admin/music/library/delete', { paths });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.detail || '删除失败');
-        musicLibraryData = data;
-        renderMusicLibrary();
+        await refreshMusicLibrary();
     } catch (error) {
         alert(`删除音乐文件失败：${error.message || error}`);
     }
@@ -916,6 +921,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     const refreshMusicLibraryBtn = document.getElementById('refresh-music-library-btn');
     if (refreshMusicLibraryBtn) refreshMusicLibraryBtn.addEventListener('click', refreshMusicLibrary);
+    const musicLibrarySearch = document.getElementById('music-library-search');
+    const searchMusicLibraryBtn = document.getElementById('search-music-library-btn');
+    if (musicLibrarySearch) musicLibrarySearch.addEventListener('input', () => {
+        clearTimeout(musicLibrarySearchTimer);
+        musicLibrarySearchTimer = setTimeout(refreshMusicLibrary, 250);
+    });
+    if (musicLibrarySearch) musicLibrarySearch.addEventListener('search', refreshMusicLibrary);
+    if (searchMusicLibraryBtn) searchMusicLibraryBtn.addEventListener('click', refreshMusicLibrary);
 
     // 退出登录按钮
     const logoutBtn = document.getElementById('logout-btn');

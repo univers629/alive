@@ -1031,12 +1031,42 @@ def _music_library_file(relative: str) -> Path | None:
     return candidate
 
 
-def _music_library_snapshot() -> dict:
+def _music_library_snapshot(search: str = "") -> dict:
     root = _music_library_root()
     active_path = d.active_music_library_path
+    query = search.strip()[:160]
     tracks = []
     total_bytes = 0
     total_files = 0
+    if query:
+        metadata = d.search_music_library_metadata(query, MUSIC_LIBRARY_LIST_LIMIT)
+        for relative, details in metadata.items():
+            file = _music_library_file(relative)
+            if file is None:
+                continue
+            try:
+                info = file.stat()
+            except OSError:
+                continue
+            total_files += 1
+            total_bytes += info.st_size
+            tracks.append({
+                "library_path": relative,
+                "size": info.st_size,
+                "modified_at": info.st_mtime,
+                "active": relative == active_path,
+                **details,
+            })
+        return {
+            "success": True,
+            "music_library": str(root),
+            "active_library_path": active_path,
+            "tracks": tracks,
+            "total_files": total_files,
+            "total_bytes": total_bytes,
+            "truncated": len(metadata) >= MUSIC_LIBRARY_LIST_LIMIT,
+            "search": query,
+        }
     for file in root.rglob("*"):
         if not file.is_file() or file.suffix.casefold() not in MUSIC_AUDIO_TYPES:
             continue
@@ -1068,6 +1098,7 @@ def _music_library_snapshot() -> dict:
         "total_files": total_files,
         "total_bytes": total_bytes,
         "truncated": total_files > len(tracks),
+        "search": "",
     }
 
 
@@ -1462,8 +1493,8 @@ def admin_snapshot():
     tags=["后台管理 / Admin"],
     summary="列出已上传的本地音乐文件",
 )
-def admin_music_library():
-    return _music_library_snapshot()
+def admin_music_library(search: str = ""):
+    return _music_library_snapshot(search)
 
 
 @app.post(

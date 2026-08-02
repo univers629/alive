@@ -206,15 +206,19 @@
                         </div>
                         <button class="btn btn-secondary" id="refresh-music-library-btn" type="button">刷新音乐库</button>
                     </div>
-                    <p class="panel-help">文件按内容哈希保存。当前正在一起听的文件会锁定，切歌或清空音乐状态后才能删除。</p>
-                    <div class="device-table-wrap">
+                    <p class="panel-help">文件在服务端按内容校验保存。当前正在一起听的文件会锁定，切歌或清空音乐状态后才能删除。</p>
+                    <div class="music-library-tools">
+                        <input id="music-library-search" class="panel-input" type="search" maxlength="160"
+                            autocomplete="off" placeholder="搜索歌曲、艺术家或专辑">
+                        <button class="btn btn-secondary" id="search-music-library-btn" type="button">搜索</button>
+                    </div>
+                    <div class="device-table-wrap music-library-scroll">
                         <table class="device-list music-library-table">
                             <thead>
                                 <tr>
                                     <th>歌曲</th>
                                     <th>艺术家</th>
                                     <th>专辑</th>
-                                    <th>文件</th>
                                     <th>大小</th>
                                     <th>上传时间</th>
                                     <th>状态</th>
@@ -222,7 +226,7 @@
                                 </tr>
                             </thead>
                             <tbody id="music-library-list">
-                                <tr><td colspan="8" class="empty-row">正在读取音乐库…</td></tr>
+                                <tr><td colspan="7" class="empty-row">正在读取音乐库…</td></tr>
                             </tbody>
                         </table>
                     </div>

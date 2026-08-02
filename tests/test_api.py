@@ -278,6 +278,20 @@ def test_music_state_and_timestamped_lyrics_use_authenticated_post():
         assert public["player_icon_url"] == "/music-player-icons/abc.png"
         assert client.get("/api/status/query").json()["music"]["artist"] == "Alive"
 
+        newer = client.post(
+            "/api/music/set",
+            headers=headers,
+            json={"title": "下一首", "artist": "Alive", "client_updated_at": 200, "playing": True},
+        )
+        assert newer.status_code == 200
+        stale = client.post(
+            "/api/music/set",
+            headers=headers,
+            json={"title": "迟到的上一首", "artist": "Alive", "client_updated_at": 100, "playing": True},
+        )
+        assert stale.status_code == 200
+        assert client.get("/api/music/query").json()["music"]["title"] == "下一首"
+
         cleared = client.post("/api/music/clear", headers=headers, json={})
         assert cleared.status_code == 200
         assert client.get("/api/music/query").json()["music"]["active"] is False
@@ -437,6 +451,11 @@ def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path)
             assert tracks[current_path]["artist"] == "Salt Player"
             assert tracks[current_path]["album"] == "测试专辑"
             assert tracks[other_path]["active"] is False
+
+            search = client.get("/api/admin/music/library?search=salt", headers=headers)
+            assert search.status_code == 200
+            assert search.json()["total_files"] == 1
+            assert search.json()["tracks"][0]["library_path"] == current_path
 
             protected = client.post(
                 "/api/admin/music/library/delete",

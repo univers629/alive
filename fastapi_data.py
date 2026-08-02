@@ -16,7 +16,7 @@ from typing import Any, Iterator
 
 import pytz
 import schedule
-from sqlalchemy import JSON, Boolean, Float, Integer, String, Text, create_engine, delete, func, inspect, select, text
+from sqlalchemy import JSON, Boolean, Float, Integer, String, Text, create_engine, delete, func, inspect, or_, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, scoped_session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -118,6 +118,7 @@ class _MusicStateData(Base):
     position: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     playing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     lyrics: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    client_updated_at: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     updated_at: Mapped[float] = mapped_column(Float, nullable=False, default=time)
 
 
@@ -288,6 +289,9 @@ class Data:
             for name, statement in missing_music.items():
                 if name not in music_columns:
                     connection.execute(text(statement))
+            music_state_columns = {column["name"] for column in inspect(self.engine).get_columns("music_state")}
+            if "client_updated_at" not in music_state_columns:
+                connection.execute(text("ALTER TABLE music_state ADD COLUMN client_updated_at FLOAT NOT NULL DEFAULT 0"))
             activity_columns = {column["name"] for column in inspect(self.engine).get_columns("app_activities")}
             if "device_type" not in activity_columns:
                 connection.execute(text("ALTER TABLE app_activities ADD COLUMN device_type VARCHAR(24) NOT NULL DEFAULT 'desktop'"))
@@ -1391,6 +1395,7 @@ class Data:
 
     def music_set(self, payload: dict[str, Any]) -> dict[str, Any]:
         now = time()
+        client_updated_at = float(payload.get("client_updated_at") or 0)
         lyrics = sorted(payload.get("lyrics") or [], key=lambda line: line.get("time", 0))
         duration = float(payload.get("duration") or 0)
         position = float(payload.get("position") or 0)
@@ -1402,6 +1407,14 @@ class Data:
             if state is None:
                 state = _MusicStateData(id=0)
                 session.add(state)
+            elif (
+                client_updated_at > 0
+                and state.client_updated_at > 0
+                and client_updated_at < state.client_updated_at
+            ):
+                # Concurrent requests can arrive out of order after a rapid
+                # track change. Keep the newer client observation visible.
+                return self._serialize_music(state)
             meta = session.get(_MusicPlayerMetaData, 0)
             if meta is None:
                 meta = _MusicPlayerMetaData(id=0)
@@ -1426,6 +1439,7 @@ class Data:
             state.position = position
             state.playing = bool(payload.get("playing"))
             state.lyrics = lyrics
+            state.client_updated_at = client_updated_at
             state.updated_at = now
             meta.player_name = payload.get("player_name", "")
             meta.player_icon = payload.get("player_icon", "media-player")
@@ -1504,6 +1518,33 @@ class Data:
         with self.session() as session:
             rows = session.scalars(
                 select(_MusicLibraryTrackData).where(_MusicLibraryTrackData.library_path.in_(paths))
+            ).all()
+            return {
+                row.library_path: {
+                    "title": row.title,
+                    "artist": row.artist,
+                    "album": row.album,
+                    "updated_at": row.updated_at,
+                }
+                for row in rows
+            }
+
+    def search_music_library_metadata(self, query: str, limit: int = 1000) -> dict[str, dict[str, Any]]:
+        """Search the persisted song index without reading audio files or tags."""
+        needle = query.strip().casefold()
+        if not needle:
+            return {}
+        pattern = f"%{needle}%"
+        with self.session() as session:
+            rows = session.scalars(
+                select(_MusicLibraryTrackData)
+                .where(or_(
+                    func.lower(_MusicLibraryTrackData.title).like(pattern),
+                    func.lower(_MusicLibraryTrackData.artist).like(pattern),
+                    func.lower(_MusicLibraryTrackData.album).like(pattern),
+                ))
+                .order_by(_MusicLibraryTrackData.updated_at.desc())
+                .limit(limit)
             ).all()
             return {
                 row.library_path: {

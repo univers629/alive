@@ -71,6 +71,7 @@ class MusicStateUpdateModel(BaseModel):
     position: float = Field(default=0, ge=0, le=86400)
     playing: bool = False
     lyrics: list[MusicLyricLineModel] = Field(default_factory=list, max_length=5000)
+    client_updated_at: float = Field(default=0, ge=0, le=4102444800)
 
 
 class MusicTrackCheckModel(BaseModel):
