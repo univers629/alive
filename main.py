@@ -1006,6 +1006,7 @@ MUSIC_AUDIO_TYPES = {
 }
 MUSIC_LIBRARY_LIST_LIMIT = 1000
 MUSIC_STREAM_CACHE_DIR = ".alive-stream-cache"
+MUSIC_STREAM_CACHE_VERSION = "v2"
 MUSIC_STREAM_CACHE_BITRATE = "128k"
 _music_stream_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="alive-audio")
 _music_stream_jobs: set[str] = set()
@@ -1100,7 +1101,7 @@ def _music_stream_cache_file(source: Path, root: Path | None = None) -> Path | N
     except (OSError, ValueError):
         return None
     identity = hashlib.sha256(relative.encode("utf-8")).hexdigest()
-    return root / MUSIC_STREAM_CACHE_DIR / f"{identity}.m4a"
+    return root / MUSIC_STREAM_CACHE_DIR / MUSIC_STREAM_CACHE_VERSION / f"{identity}.m4a"
 
 
 def _music_stream_cache_ready(source: Path, cache: Path) -> bool:
@@ -1123,9 +1124,10 @@ def _transcode_music_stream(source: Path, job_key: str, root: Path | None = None
         result = subprocess.run(
             [
                 "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
-                "-i", str(source), "-map", "0:a:0", "-vn", "-threads", "1",
-                "-c:a", "aac", "-b:a", MUSIC_STREAM_CACHE_BITRATE,
-                "-ac", "2", "-movflags", "+faststart", str(temporary),
+                "-i", str(source), "-map", "0:a:0", "-map", "0:v?", "-map_metadata", "0",
+                "-threads", "1", "-c:a", "aac", "-b:a", MUSIC_STREAM_CACHE_BITRATE,
+                "-ac", "2", "-c:v", "copy", "-disposition:v:0", "attached_pic",
+                "-movflags", "+faststart", str(temporary),
             ],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,

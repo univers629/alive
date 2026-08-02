@@ -37,6 +37,7 @@
     let loadedAudioUrl = '';
     let playbackUnlocked = false;
     let playBlocked = false;
+    let latestStateUpdatedAt = 0;
 
     function setExpanded(expanded) {
         root.classList.toggle('is-expanded', expanded);
@@ -106,7 +107,7 @@
     function updateProgress() {
         if (!state || root.hidden) return;
         if (Number(state.expires_at || 0) > 0 && Date.now() / 1000 > Number(state.expires_at)) {
-            setState(null);
+            setState(null, true);
             return;
         }
         // Playback state is kept alive by the reporter heartbeat. We deliberately
@@ -184,6 +185,7 @@
             elements.audio.load();
         } else {
             elements.audio.removeAttribute('src');
+            elements.audio.load();
         }
     }
 
@@ -195,8 +197,13 @@
         updateJoinButton();
     }
 
-    function setState(nextState) {
+    function setState(nextState, allowInactive = false) {
+        const updatedAt = Number(nextState?.updated_at || 0);
+        if (updatedAt > 0 && updatedAt < latestStateUpdatedAt) return;
         if (!nextState || !nextState.active || !nextState.title) {
+            // A delayed poll must not blank a still-valid SSE state during a
+            // song switch.  Expiry is handled locally below when it is real.
+            if (!allowInactive && state && Number(state.expires_at || 0) > Date.now() / 1000) return;
             state = null;
             document.body.classList.remove('music-island-visible');
             setExpanded(false);
@@ -212,6 +219,7 @@
             : '';
         const previousLyrics = lyricsSignature(state?.lyrics);
         state = nextState;
+        latestStateUpdatedAt = Math.max(latestStateUpdatedAt, updatedAt);
         const nextSong = `${state.source_id || ''}|${state.title || ''}|${state.artist || ''}`;
         const lyricsChanged = lyricsSignature(state.lyrics) !== previousLyrics;
         document.body.classList.add('music-island-visible');
