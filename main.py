@@ -429,6 +429,7 @@ def index(request: Request):
         page_desc=c.page.desc,
         page_favicon=favicon_url(),
         page_background=c.page.background,
+        card_style=d.card_style,
         cards={"main": main_card or ""},
         music_island=music_island or "",
         comment_wall=comment_wall or "",
@@ -453,6 +454,7 @@ def details_page(request: Request):
         page_desc=f"{d.page_title} 的设备、访问和互动详情",
         page_favicon=favicon_url(),
         page_background=c.page.background,
+        card_style=d.card_style,
         site_chrome=site_chrome or "",
         site_footer=site_footer or "",
         music_island=music_island or "",
@@ -1383,6 +1385,7 @@ def admin_snapshot():
             "danmaku_replay_interval": d.danmaku_replay_interval,
             "page_name": d.page_name,
             "page_title": d.page_title,
+            "card_style": d.card_style,
             "favicon": favicon_url(),
             "profile_avatar": profile_avatar_url(),
             "social_links": _social_links(),
@@ -1442,6 +1445,11 @@ async def admin_settings(request: Request):
         if len(page_title) > 120:
             raise u.APIUnsuccessful(400, "page_title must be 120 characters or fewer")
         d.set_runtime_setting("page_title", page_title)
+    if "card_style" in body:
+        card_style = str(body["card_style"])
+        if card_style not in {"glass", "solid"}:
+            raise u.APIUnsuccessful(400, "card_style must be glass or solid")
+        d.set_runtime_setting("card_style", card_style)
     if "social_links" in body:
         d.set_runtime_setting(
             "social_links",
@@ -1477,6 +1485,7 @@ async def admin_settings(request: Request):
             "danmaku_replay_interval": d.danmaku_replay_interval,
             "page_name": d.page_name,
             "page_title": d.page_title,
+            "card_style": d.card_style,
             "favicon": favicon_url(),
             "profile_avatar": profile_avatar_url(),
             "social_links": _social_links(),

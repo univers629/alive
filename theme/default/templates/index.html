@@ -38,7 +38,7 @@
     </noscript>
 </head>
 
-<body data-page-background="{{ page_background }}">
+<body data-page-background="{{ page_background }}" data-card-style="{{ card_style }}">
     {{ site_chrome | safe }}
     <main class="container" id="main-content">
         {% for card_name, card_value in cards.items() %}

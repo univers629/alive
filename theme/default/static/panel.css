@@ -250,6 +250,94 @@ body.admin-panel[data-loading="true"] .panel-card {
   margin: 0 0 14px;
 }
 
+.card-style-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 58px;
+  padding: 12px 14px;
+  color: var(--alive-ink);
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 16px;
+  background: var(--alive-surface);
+  cursor: pointer;
+}
+
+.card-style-control__copy strong,
+.card-style-control__copy small {
+  display: block;
+}
+
+.card-style-control__copy strong {
+  font: 700 .82rem/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.card-style-control__copy small {
+  margin-top: 4px;
+  color: var(--alive-muted);
+  font: 520 .68rem/1.2 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+}
+
+.card-style-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex: none;
+}
+
+.card-style-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+}
+
+.card-style-switch__track {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--alive-border-soft);
+  border-radius: 999px;
+  background: var(--alive-surface-soft);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .12);
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.card-style-switch__track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--alive-ink);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, .22);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.card-style-switch input:checked + .card-style-switch__track {
+  border-color: var(--alive-accent);
+  background: var(--alive-accent);
+}
+
+.card-style-switch input:checked + .card-style-switch__track::after {
+  background: #fff;
+  transform: translateX(20px);
+}
+
+.card-style-switch input:focus-visible + .card-style-switch__track {
+  outline: 3px solid color-mix(in srgb, var(--alive-accent) 42%, transparent);
+  outline-offset: 3px;
+}
+
+.card-style-switch input:disabled + .card-style-switch__track {
+  opacity: .55;
+}
+
 .social-link-editor-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

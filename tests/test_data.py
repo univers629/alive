@@ -28,9 +28,11 @@ def test_runtime_site_settings_survive_database_reopen(tmp_path):
     config.main.database = f"sqlite:///{database.as_posix()}"
 
     first = Data(config, start_scheduler=False)
+    assert first.card_style == "glass"
     first.set_runtime_setting("danmaku_enabled", "false")
     first.set_runtime_setting("page_name", "RealDeviceOwner")
     first.set_runtime_setting("page_title", "Real Device Status")
+    first.set_runtime_setting("card_style", "solid")
     first.set_runtime_setting("online_status_desc", "Available now")
     first.set_runtime_setting("offline_status_desc", "Unavailable now")
     first.set_runtime_setting("music_library", str(tmp_path / "music"))
@@ -41,6 +43,7 @@ def test_runtime_site_settings_survive_database_reopen(tmp_path):
         assert reopened.danmaku_enabled is False
         assert reopened.page_name == "RealDeviceOwner"
         assert reopened.page_title == "Real Device Status"
+        assert reopened.card_style == "solid"
         assert reopened.online_status_desc == "Available now"
         assert reopened.offline_status_desc == "Unavailable now"
         assert reopened.music_library == str(tmp_path / "music")

@@ -15,6 +15,7 @@ let displaySettings = {
     danmaku_replay_interval: 30,
     page_name: 'Alive',
     page_title: 'Alive',
+    card_style: 'glass',
     music_library: '/alive/music-library',
     online_status_desc: '',
     offline_status_desc: ''
@@ -105,6 +106,7 @@ async function initPage() {
         if (pageName) pageName.value = displaySettings.page_name || 'Alive';
         const pageTitle = document.getElementById('page-title');
         if (pageTitle) pageTitle.value = displaySettings.page_title || 'Alive';
+        updateCardStyleControl(displaySettings.card_style || 'glass');
         const danmakuEnabled = document.getElementById('danmaku-enabled');
         if (danmakuEnabled) danmakuEnabled.checked = displaySettings.danmaku_enabled !== false;
         const commentDisplayLimit = document.getElementById('comment-display-limit');
@@ -509,6 +511,37 @@ async function saveDisplaySettings() {
     }
 }
 
+function updateCardStyleControl(cardStyle) {
+    const toggle = document.getElementById('card-style-toggle');
+    const label = document.getElementById('card-style-label');
+    if (!toggle || !label) return;
+    const solid = cardStyle === 'solid';
+    toggle.checked = solid;
+    label.textContent = solid ? '不透明卡片' : '毛玻璃';
+}
+
+async function saveCardStyle() {
+    const toggle = document.getElementById('card-style-toggle');
+    const status = document.getElementById('card-style-status');
+    if (!toggle) return;
+    const cardStyle = toggle.checked ? 'solid' : 'glass';
+    toggle.disabled = true;
+    if (status) status.textContent = '正在保存…';
+    try {
+        const response = await postJSON('/api/admin/settings', { card_style: cardStyle });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || data.details || '保存失败');
+        displaySettings = data.settings;
+        updateCardStyleControl(displaySettings.card_style);
+        if (status) status.textContent = '已保存，刷新主页或详情页后生效';
+    } catch (error) {
+        updateCardStyleControl(displaySettings.card_style || 'glass');
+        if (status) status.textContent = `保存失败：${error.message || error}`;
+    } finally {
+        toggle.disabled = false;
+    }
+}
+
 async function saveCommentDisplaySettings() {
     const values = {
         danmaku_enabled: document.getElementById('danmaku-enabled')?.checked,
@@ -808,6 +841,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (saveDisplaySettingsBtn) {
         saveDisplaySettingsBtn.addEventListener('click', saveDisplaySettings);
     }
+    const cardStyleToggle = document.getElementById('card-style-toggle');
+    if (cardStyleToggle) cardStyleToggle.addEventListener('change', saveCardStyle);
     const saveStatusDescriptionsBtn = document.getElementById('save-status-descriptions-btn');
     if (saveStatusDescriptionsBtn) {
         saveStatusDescriptionsBtn.addEventListener('click', saveStatusDescriptions);

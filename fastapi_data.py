@@ -1006,6 +1006,7 @@ class Data:
             "danmaku_replay_interval",
             "page_name",
             "page_title",
+            "card_style",
             "social_links",
             "music_library",
             "online_status_desc",
@@ -1054,6 +1055,12 @@ class Data:
     @property
     def page_title(self) -> str:
         return self.runtime_setting("page_title", self._c.page.title)
+
+    @property
+    def card_style(self) -> str:
+        """Keep existing installations on the established glass-card presentation."""
+        value = self.runtime_setting("card_style", "glass")
+        return value if value in {"glass", "solid"} else "glass"
 
     @property
     def music_library(self) -> str:

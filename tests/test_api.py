@@ -799,6 +799,7 @@ def test_admin_comment_flags_reorder_and_panel_controls():
         assert 'id="profile-avatar-file" class="visually-hidden-file"' in panel.text
         assert 'id="choose-profile-avatar-btn"' in panel.text
         assert 'id="social-links-editor"' in panel.text
+        assert 'id="card-style-toggle"' in panel.text
         assert 'id="comments-list"' in panel.text
         assert "id=\"danmaku-enabled\"" in panel.text
         assert "sort_order" not in panel.text
@@ -837,6 +838,7 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
                 "danmaku_replay_interval": 45,
                 "page_name": "Codex",
                 "page_title": "Codex Status",
+                "card_style": "solid",
                 "social_links": [
                     {"platform": "github", "url": "https://github.com/univers629"},
                     {"platform": "email", "url": "codex@example.com"},
@@ -855,6 +857,7 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert settings.json()["settings"]["danmaku_replay_interval"] == 45
         assert settings.json()["settings"]["page_name"] == "Codex"
         assert settings.json()["settings"]["page_title"] == "Codex Status"
+        assert settings.json()["settings"]["card_style"] == "solid"
         assert settings.json()["settings"]["social_links"][0]["platform"] == "github"
         assert settings.json()["settings"]["social_links"][1]["url"] == "mailto:codex@example.com"
         assert settings.json()["settings"]["online_status_desc"] == "现在可以联系我。"
@@ -865,7 +868,10 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert 'id="health-overview" aria-labelledby="health-overview-title"\n    hidden>' in client.get("/").text
         assert "https://github.com/univers629" in client.get("/").text
         assert "<title>Codex Status</title>" in client.get("/").text
+        assert 'data-card-style="solid"' in client.get("/").text
         assert "<title>Codex Status · 详情</title>" in client.get("/details").text
+        assert 'data-card-style="solid"' in client.get("/details").text
+        assert client.post("/api/admin/settings", json={"card_style": "blur"}).status_code == 400
         client.post("/panel/logout")
         assert "<title>Codex Status - 登录</title>" in client.get("/panel/login").text
         client.post("/panel/auth", json={"secret": "test-secret-1234"})

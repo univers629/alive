@@ -34,6 +34,18 @@
   --alive-page-tint: rgba(6, 7, 12, .32);
 }
 
+body[data-card-style="solid"] {
+  --alive-panel: var(--alive-surface-solid);
+  --alive-surface: var(--alive-surface-solid);
+  --alive-surface-soft: var(--alive-surface-solid);
+  --alive-input: var(--alive-surface-solid);
+}
+
+body[data-card-style="solid"] :is(.card, .comment-wall, .device-card, .details-card, .details-metric) {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 body {
   isolation: isolate;
   color: var(--alive-ink);
