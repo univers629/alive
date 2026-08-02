@@ -114,7 +114,8 @@
     function setCover(url) {
         const coverUrl = String(url || '');
         root.classList.toggle('has-cover', Boolean(coverUrl));
-        elements.cover.src = coverUrl;
+        if (coverUrl) elements.cover.src = coverUrl;
+        else elements.cover.removeAttribute('src');
         elements.cover.alt = coverUrl && state ? `${state.title} 的封面` : '';
     }
 
@@ -127,13 +128,15 @@
         // The bundled NetEase icon is only used on the netease-api chain (a
         // song ID was resolved). Local-upload and metadata-only chains keep
         // the default glyph even when the reporting player is NetEase.
-        const bundledUrl = safeKey === 'cloudmusic' && sourceMode === 'netease-api'
-            ? root.dataset.neteaseIcon || ''
-            : '';
+        const bundledUrl = safeKey === 'saltplayer'
+            ? root.dataset.saltplayerIcon || ''
+            : (safeKey === 'cloudmusic' && sourceMode === 'netease-api'
+                ? root.dataset.neteaseIcon || '' : '');
         const shownUrl = uploadedUrl || bundledUrl;
         root.classList.toggle('has-player-icon', Boolean(shownUrl));
         elements.appGlyph.textContent = icon.glyph;
-        elements.appIcon.src = shownUrl;
+        if (shownUrl) elements.appIcon.src = shownUrl;
+        else elements.appIcon.removeAttribute('src');
         elements.appIcon.hidden = !shownUrl;
         elements.appIcon.alt = label;
         elements.app.title = label;
@@ -223,6 +226,13 @@
 
     elements.cover.addEventListener('error', () => {
         root.classList.remove('has-cover');
+        elements.cover.removeAttribute('src');
+    });
+
+    elements.appIcon.addEventListener('error', () => {
+        root.classList.remove('has-player-icon');
+        elements.appIcon.hidden = true;
+        elements.appIcon.removeAttribute('src');
     });
 
     elements.join.addEventListener('click', (event) => {
