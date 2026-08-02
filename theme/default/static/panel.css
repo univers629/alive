@@ -486,7 +486,6 @@ body.admin-panel[data-loading="true"] .panel-card {
   max-height: 850px;
   padding-right: 4px;
   overflow-y: auto;
-  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--alive-muted) 42%, transparent) transparent;
 }
@@ -735,7 +734,6 @@ input[type="checkbox"] {
 .music-library-scroll {
   max-height: 570px;
   overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .music-library-scroll::-webkit-scrollbar {

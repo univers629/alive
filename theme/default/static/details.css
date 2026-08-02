@@ -360,7 +360,6 @@
   max-height: 650px;
   padding-right: 4px;
   overflow-y: auto;
-  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--alive-muted) 42%, transparent) transparent;
 }
