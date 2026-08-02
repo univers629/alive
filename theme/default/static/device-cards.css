@@ -289,7 +289,7 @@
 
 .device-card--idle .device-card__name strong,
 .device-card--idle .device-card__app-copy span {
-  color: color-mix(in srgb, var(--alive-ink, #282532) 72%, var(--alive-muted, #777));
+  color: color-mix(in srgb, var(--alive-ink, #282532) 56%, var(--alive-muted, #777));
 }
 
 .device-card--offline .device-card__name strong,
@@ -299,7 +299,7 @@
 
 .device-card--idle .device-card__state,
 .device-card--offline .device-card__state {
-  color: var(--alive-faint, rgba(40, 37, 50, .42));
+  color: color-mix(in srgb, var(--alive-ink, #282532) 38%, var(--alive-faint, rgba(40, 37, 50, .42)));
   background: color-mix(in srgb, var(--alive-surface, rgba(255, 255, 255, .48)) 72%, transparent);
 }
 

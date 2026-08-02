@@ -504,6 +504,9 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert "commentDisplayLimit = Number(root.dataset.displayLimit) || 8" in danmaku_js
         assert "replayInterval = Number(root.dataset.replayInterval) || 30" in danmaku_js
         assert "function replayDanmakuBatch()" in danmaku_js
+        assert "function launchNewDanmaku(commentsToLaunch)" in danmaku_js
+        assert "if (hasLoadedComments && newComments.length) launchNewDanmaku(newComments);" in danmaku_js
+        assert "launchDanmaku(payload.comment);" in danmaku_js
         assert ".comment-wall__item--pinned" in danmaku_css
         assert "window.setInterval(replayDanmakuBatch, replayInterval * 1000)" in danmaku_js
 
@@ -517,6 +520,9 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in device_css
         assert ".steps-card__ring {" in device_css
         assert ".tablet-device-icon {" in device_css
+        assert ".device-card--idle .device-card__name strong," in device_css
+        assert "var(--alive-ink, #282532) 56%" in device_css
+        assert "var(--alive-ink, #282532) 38%" in device_css
         tablet_css = client.get("/static/main.css").text
         assert "width: 27px;" in tablet_css
         assert "#4ebbed;" in tablet_css

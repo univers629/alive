@@ -30,6 +30,7 @@
   let comments = [];
   let lane = 0;
   let replayTimer = null;
+  let hasLoadedComments = false;
   let serverEnabled = root.dataset.serverEnabled === 'true';
   let danmakuEnabled = serverEnabled && localStorage.getItem('alive-danmaku') !== 'off';
 
@@ -139,6 +140,14 @@
     replayTimer = window.setInterval(replayDanmakuBatch, replayInterval * 1000);
   }
 
+  function launchNewDanmaku(commentsToLaunch) {
+    commentsToLaunch
+      .sort((left, right) => Number(left.created_at) - Number(right.created_at))
+      .forEach((comment, index) => {
+        window.setTimeout(() => launchDanmaku(comment), index * 700);
+      });
+  }
+
   async function refreshComments() {
     if (document.hidden) return;
     try {
@@ -155,9 +164,12 @@
       resetDanmakuTimer();
       setDanmakuEnabled(localStorage.getItem('alive-danmaku') !== 'off');
       const incoming = (Array.isArray(payload.comments) ? payload.comments : []).slice(0, commentDisplayLimit);
+      const newComments = incoming.filter((comment) => !knownIds.has(comment.id));
       incoming.forEach((comment) => knownIds.add(comment.id));
       comments = incoming;
       renderComments();
+      if (hasLoadedComments && newComments.length) launchNewDanmaku(newComments);
+      hasLoadedComments = true;
     } catch (error) {
       if (!comments.length) {
         elements.list.innerHTML = '<li class="comment-wall__empty">暂时无法读取评论，请稍后重试。</li>';
@@ -208,6 +220,7 @@
             || Number(right.created_at) - Number(left.created_at))
           .slice(0, commentDisplayLimit);
         renderComments();
+        launchDanmaku(payload.comment);
       }
     } catch (error) {
       elements.status.textContent = error.message || '发送失败，请稍后再试';
