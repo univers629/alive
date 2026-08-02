@@ -1044,6 +1044,7 @@ def test_admin_uses_signed_session_and_post_actions():
         assert 'data-loading="true" aria-busy="true"' in panel.text
         assert 'id="panel-loading-status"' in panel.text
         assert 'id="music-library-list"' in panel.text
+        assert panel.text.index("设备管理") < panel.text.index("音乐库管理")
         assert 'class="device-table-wrap"' in panel.text
         assert 'id="music-account-status"' not in panel.text
         assert 'id="music-credential-value"' not in panel.text
