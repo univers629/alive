@@ -871,6 +871,7 @@ def test_admin_can_choose_public_visit_period_and_edit_device_profile(tmp_path):
         assert 'data-card-style="solid"' in client.get("/").text
         assert "<title>Codex Status · 详情</title>" in client.get("/details").text
         assert 'data-card-style="solid"' in client.get("/details").text
+        assert 'data-card-style="solid"' in client.get("/panel").text
         assert client.post("/api/admin/settings", json={"card_style": "blur"}).status_code == 400
         client.post("/panel/logout")
         assert "<title>Codex Status - 登录</title>" in client.get("/panel/login").text

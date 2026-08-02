@@ -1734,6 +1734,7 @@ async def admin_panel(request: Request):
         page_title=d.page_title,
         page_favicon=favicon_url(),
         profile_avatar=profile_avatar_url(),
+        card_style=d.card_style,
         inject="",
     )
     if content is None:

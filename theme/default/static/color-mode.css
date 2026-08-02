@@ -41,7 +41,7 @@ body[data-card-style="solid"] {
   --alive-input: var(--alive-surface-solid);
 }
 
-body[data-card-style="solid"] :is(.card, .comment-wall, .device-card, .details-card, .details-metric) {
+body[data-card-style="solid"] :is(.card, .comment-wall, .device-card, .details-card, .details-metric, .panel-card) {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }

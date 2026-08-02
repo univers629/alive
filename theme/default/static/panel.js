@@ -533,6 +533,7 @@ async function saveCardStyle() {
         if (!response.ok || !data.success) throw new Error(data.message || data.details || '保存失败');
         displaySettings = data.settings;
         updateCardStyleControl(displaySettings.card_style);
+        document.body.dataset.cardStyle = displaySettings.card_style;
         if (status) status.textContent = '已保存，刷新主页或详情页后生效';
     } catch (error) {
         updateCardStyleControl(displaySettings.card_style || 'glass');
