@@ -100,7 +100,9 @@
             setState(null);
             return;
         }
-        const position = joined ? Number(elements.audio.currentTime || 0) : 0;
+        // Playback state is kept alive by the reporter heartbeat. We deliberately
+        // do not infer or synchronize the owner's precise position for visitors.
+        const position = joined ? Number(elements.audio.currentTime || 0) : Number(state.position || 0);
         const duration = Number(elements.audio.duration || state.duration || 0);
         const fraction = duration > 0 ? Math.min(position / duration, 1) : 0;
         const percent = Math.round(fraction * 100);
@@ -293,7 +295,7 @@
 
     refreshMusicState();
     // SSE handles normal changes; this is only a fallback for buffered proxies.
-    window.setInterval(refreshMusicState, 5000);
+    window.setInterval(refreshMusicState, 1000);
 
     window.setInterval(updateProgress, 250);
 })();

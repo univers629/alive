@@ -624,11 +624,9 @@ function updateCardStyleControl(cardStyle) {
 
 async function saveCardStyle() {
     const toggle = document.getElementById('card-style-toggle');
-    const status = document.getElementById('card-style-status');
     if (!toggle) return;
     const cardStyle = toggle.checked ? 'solid' : 'glass';
     toggle.disabled = true;
-    if (status) status.textContent = '正在保存…';
     try {
         const response = await postJSON('/api/admin/settings', { card_style: cardStyle });
         const data = await response.json();
@@ -636,10 +634,9 @@ async function saveCardStyle() {
         displaySettings = data.settings;
         updateCardStyleControl(displaySettings.card_style);
         document.body.dataset.cardStyle = displaySettings.card_style;
-        if (status) status.textContent = '已保存，刷新主页或详情页后生效';
     } catch (error) {
         updateCardStyleControl(displaySettings.card_style || 'glass');
-        if (status) status.textContent = `保存失败：${error.message || error}`;
+        alert(`切换卡片风格失败：${error.message || error}`);
     } finally {
         toggle.disabled = false;
     }

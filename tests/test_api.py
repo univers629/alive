@@ -433,6 +433,17 @@ def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path)
         with TestClient(main.app) as client:
             current_path = upload(client, first)
             other_path = upload(client, second)
+            other_file = main._music_library_file(other_path)
+            assert other_file is not None
+            other_cache = main._music_stream_cache_file(other_file)
+            assert other_cache is not None
+            other_cache.parent.mkdir(parents=True, exist_ok=True)
+            other_cache.write_bytes(b"\x00\x00\x00\x18ftypM4A ")
+            current_file = main._music_library_file(current_path)
+            assert current_file is not None
+            current_cache = main._music_stream_cache_file(current_file)
+            assert current_cache is not None
+            current_cache.write_bytes(b"\x00\x00\x00\x18ftypM4A compressed")
             state = client.post(
                 "/api/music/set",
                 headers=headers,
@@ -442,6 +453,10 @@ def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path)
                 },
             )
             assert state.status_code == 200
+            compressed_stream = client.get(state.json()["music"]["audio_url"])
+            assert compressed_stream.status_code == 200
+            assert compressed_stream.content == b"\x00\x00\x00\x18ftypM4A compressed"
+            assert compressed_stream.headers["content-type"].startswith("audio/mp4")
 
             listing = client.get("/api/admin/music/library", headers=headers)
             assert listing.status_code == 200
@@ -451,6 +466,7 @@ def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path)
             assert tracks[current_path]["artist"] == "Salt Player"
             assert tracks[current_path]["album"] == "测试专辑"
             assert tracks[other_path]["active"] is False
+            assert all(not track["library_path"].startswith(".alive-stream-cache/") for track in tracks.values())
 
             search = client.get("/api/admin/music/library?search=salt", headers=headers)
             assert search.status_code == 200
@@ -471,6 +487,7 @@ def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path)
             )
             assert deleted.status_code == 200
             assert deleted.json()["deleted"] == 1
+            assert other_cache.exists() is False
 
             assert client.post("/api/music/clear", headers=headers, json={}).status_code == 200
             removed_current = client.post(

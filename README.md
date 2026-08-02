@@ -38,6 +38,9 @@
    ```bash
    sudo docker compose up -d --build
    ```
+
+   音乐原文件会保留在 `ALIVE_MUSIC_LIBRARY_HOST`。服务会在上传完成后、以及每次启动时后台生成 128kbps AAC 流媒体缓存；缓存不出现在后台音乐库列表，删除原曲时会一并删除。
+
 3. 准备网页：
 
    配置反向代理与域名等

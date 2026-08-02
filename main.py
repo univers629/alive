@@ -12,10 +12,13 @@ import json
 import logging
 import os
 import secrets
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime
 from mimetypes import guess_type
 from pathlib import Path
+from threading import Lock
 from time import time
 from traceback import format_exc
 from urllib.parse import urlparse
@@ -209,6 +212,7 @@ async def lifespan(_: FastAPI):
     d.ensure_schema()
     if c.metrics.enabled:
         d._metrics_refresh()
+    _schedule_music_stream_cache_backfill()
     yield
     d.close()
 
@@ -999,6 +1003,12 @@ MUSIC_AUDIO_TYPES = {
     ".wav": "audio/wav",
 }
 MUSIC_LIBRARY_LIST_LIMIT = 1000
+MUSIC_STREAM_CACHE_DIR = ".alive-stream-cache"
+MUSIC_STREAM_CACHE_BITRATE = "128k"
+_music_stream_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="alive-audio")
+_music_stream_jobs: set[str] = set()
+_music_stream_jobs_lock = Lock()
+_music_stream_backfill_running = False
 
 
 def _music_track_location(digest: str, suffix: str) -> tuple[str, Path]:
@@ -1018,13 +1028,140 @@ def _music_library_root() -> Path:
     return Path(u.get_path(d.music_library, is_dir=True)).resolve()
 
 
+def _music_stream_cache_file(source: Path) -> Path | None:
+    root = _music_library_root()
+    try:
+        relative = source.resolve().relative_to(root).as_posix()
+    except (OSError, ValueError):
+        return None
+    identity = hashlib.sha256(relative.encode("utf-8")).hexdigest()
+    return root / MUSIC_STREAM_CACHE_DIR / f"{identity}.m4a"
+
+
+def _music_stream_cache_ready(source: Path, cache: Path) -> bool:
+    try:
+        return cache.is_file() and cache.stat().st_size > 0 and cache.stat().st_mtime >= source.stat().st_mtime
+    except OSError:
+        return False
+
+
+def _transcode_music_stream(source: Path, job_key: str) -> None:
+    temporary: Path | None = None
+    try:
+        cache = _music_stream_cache_file(source)
+        if cache is None or _music_stream_cache_ready(source, cache) or not source.is_file():
+            return
+        source_info = source.stat()
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        temporary = cache.with_name(f".{cache.stem}.{secrets.token_hex(8)}.m4a")
+        result = subprocess.run(
+            [
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+                "-i", str(source), "-map", "0:a:0", "-vn", "-threads", "1",
+                "-c:a", "aac", "-b:a", MUSIC_STREAM_CACHE_BITRATE,
+                "-ac", "2", "-movflags", "+faststart", str(temporary),
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=900,
+            check=False,
+        )
+        source_unchanged = (
+            source.is_file()
+            and source.stat().st_size == source_info.st_size
+            and source.stat().st_mtime_ns == source_info.st_mtime_ns
+        )
+        if (
+            result.returncode == 0
+            and source_unchanged
+            and temporary.is_file()
+            and _valid_audio_container(temporary, ".m4a")
+        ):
+            temporary.replace(cache)
+        else:
+            l.warning("Unable to create compressed music stream cache for %s", source.name)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        l.warning("Unable to create compressed music stream cache for %s: %s", source.name, error)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+        with _music_stream_jobs_lock:
+            _music_stream_jobs.discard(job_key)
+
+
+def _schedule_music_stream_transcode(source: Path) -> None:
+    cache = _music_stream_cache_file(source)
+    if cache is None or _music_stream_cache_ready(source, cache):
+        return
+    try:
+        job_key = str(source.resolve())
+    except OSError:
+        return
+    with _music_stream_jobs_lock:
+        if job_key in _music_stream_jobs:
+            return
+        _music_stream_jobs.add(job_key)
+    try:
+        _music_stream_executor.submit(_transcode_music_stream, source, job_key)
+    except RuntimeError:
+        with _music_stream_jobs_lock:
+            _music_stream_jobs.discard(job_key)
+
+
+def _backfill_music_stream_cache() -> None:
+    global _music_stream_backfill_running
+    try:
+        root = _music_library_root()
+        if not root.is_dir():
+            return
+        for source in root.rglob("*"):
+            if not source.is_file() or source.suffix.casefold() not in MUSIC_AUDIO_TYPES:
+                continue
+            try:
+                relative = source.relative_to(root)
+            except ValueError:
+                continue
+            if relative.parts and relative.parts[0] == MUSIC_STREAM_CACHE_DIR:
+                continue
+            _transcode_music_stream(source, str(source.resolve()))
+    except OSError as error:
+        l.warning("Unable to inspect music stream cache: %s", error)
+    finally:
+        with _music_stream_jobs_lock:
+            _music_stream_backfill_running = False
+
+
+def _schedule_music_stream_cache_backfill() -> None:
+    global _music_stream_backfill_running
+    with _music_stream_jobs_lock:
+        if _music_stream_backfill_running:
+            return
+        _music_stream_backfill_running = True
+    try:
+        _music_stream_executor.submit(_backfill_music_stream_cache)
+    except RuntimeError:
+        with _music_stream_jobs_lock:
+            _music_stream_backfill_running = False
+
+
+def _preferred_music_stream(source: Path) -> Path:
+    cache = _music_stream_cache_file(source)
+    if cache is not None and _music_stream_cache_ready(source, cache):
+        return cache
+    _schedule_music_stream_transcode(source)
+    return source
+
+
 def _music_library_file(relative: str) -> Path | None:
     if not isinstance(relative, str) or not relative or len(relative) > 4096:
         return None
     candidate = (_music_library_root() / relative).resolve()
     try:
-        candidate.relative_to(_music_library_root())
+        path_parts = candidate.relative_to(_music_library_root()).parts
     except ValueError:
+        return None
+    if path_parts and path_parts[0] == MUSIC_STREAM_CACHE_DIR:
         return None
     if candidate.suffix.casefold() not in MUSIC_AUDIO_TYPES:
         return None
@@ -1074,6 +1211,8 @@ def _music_library_snapshot(search: str = "") -> dict:
             info = file.stat()
             relative = file.relative_to(root).as_posix()
         except (OSError, ValueError):
+            continue
+        if relative.split("/", 1)[0] == MUSIC_STREAM_CACHE_DIR:
             continue
         total_files += 1
         total_bytes += info.st_size
@@ -1172,6 +1311,7 @@ async def music_track_upload(request: Request):
 
     relative, destination = _music_track_location(digest, suffix)
     if destination.is_file() and destination.stat().st_size == advertised_size:
+        _schedule_music_stream_transcode(destination)
         return {
             "success": True,
             "uploaded": False,
@@ -1208,6 +1348,7 @@ async def music_track_upload(request: Request):
     finally:
         temporary.unlink(missing_ok=True)
 
+    _schedule_music_stream_transcode(destination)
     return {
         "success": True,
         "uploaded": True,
@@ -1225,6 +1366,7 @@ def music_audio(token: str):
     file = d.music_audio_path(token)
     if file is None:
         raise HTTPException(status_code=404, detail="Current music is unavailable")
+    file = _preferred_music_stream(file)
     return FileResponse(
         file,
         media_type=MUSIC_AUDIO_TYPES.get(file.suffix.casefold())
@@ -1526,6 +1668,9 @@ async def admin_music_library_delete(request: Request):
             continue
         except OSError as error:
             raise u.APIUnsuccessful(409, f"cannot delete music file: {error}") from error
+        cache = _music_stream_cache_file(file)
+        if cache is not None:
+            cache.unlink(missing_ok=True)
         parent = file.parent
         while parent != root:
             try:
