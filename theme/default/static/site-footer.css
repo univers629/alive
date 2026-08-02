@@ -8,8 +8,8 @@
   gap: 24px;
   margin: 52px auto 0;
   padding: 22px 4px 8px;
-  color: var(--alive-muted);
-  border-top: 1px solid var(--alive-border-soft);
+  color: color-mix(in srgb, var(--alive-ink) 74%, var(--alive-muted));
+  border-top: 1px solid color-mix(in srgb, var(--alive-ink) 22%, transparent);
   font: 520 .7rem/1.45 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
 }
 
@@ -27,7 +27,7 @@
 }
 
 .site-footer__lead {
-  color: color-mix(in srgb, var(--alive-ink) 68%, var(--alive-muted));
+  color: inherit;
 }
 
 .site-footer__stack {

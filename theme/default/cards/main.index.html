@@ -50,9 +50,9 @@
             {% for social in social_links %}
             <a class="profile-social-link" href="{{ social.url }}" target="_blank" rel="me noopener noreferrer" aria-label="打开 {{ social.label }}">
                 {% if social.icon.startswith('http') %}
-                <img src="{{ social.icon }}" alt="" aria-hidden="true" loading="lazy">
+                <img src="{{ social.icon }}" alt="" aria-hidden="true" width="17" height="17" loading="lazy" decoding="async">
                 {% else %}
-                <span class="profile-social-link__fallback" aria-hidden="true">{{ social.icon }}</span>
+                <img src="{{ url_for('static', filename=social.icon) }}" alt="" aria-hidden="true" width="17" height="17" decoding="async">
                 {% endif %}
                 <span>{{ social.label }}</span>
             </a>

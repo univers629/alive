@@ -114,13 +114,13 @@ PROFILE_AVATAR_PATH = Path(u.get_path("data/public/profile-avatar.webp"))
 MAX_FAVICON_BYTES = 5 * 1024 * 1024
 
 SOCIAL_PLATFORMS = {
-    "website": {"label": "个人网站", "icon": "◎"},
+    "website": {"label": "个人网站", "icon": "img/social/website.svg"},
     "github": {"label": "GitHub", "icon": "https://cdn.simpleicons.org/github"},
     "gitlab": {"label": "GitLab", "icon": "https://cdn.simpleicons.org/gitlab"},
     "bilibili": {"label": "哔哩哔哩", "icon": "https://cdn.simpleicons.org/bilibili"},
     "weibo": {"label": "微博", "icon": "https://cdn.simpleicons.org/sinaweibo"},
     "xiaohongshu": {"label": "小红书", "icon": "https://cdn.simpleicons.org/xiaohongshu"},
-    "douyin": {"label": "抖音", "icon": "https://cdn.simpleicons.org/douyin"},
+    "douyin": {"label": "抖音", "icon": "img/social/douyin.svg"},
     "zhihu": {"label": "知乎", "icon": "https://cdn.simpleicons.org/zhihu"},
     "qq": {"label": "QQ", "icon": "https://cdn.simpleicons.org/qq"},
     "wechat": {"label": "微信", "icon": "https://cdn.simpleicons.org/wechat"},
@@ -131,9 +131,9 @@ SOCIAL_PLATFORMS = {
     "mastodon": {"label": "Mastodon", "icon": "https://cdn.simpleicons.org/mastodon"},
     "instagram": {"label": "Instagram", "icon": "https://cdn.simpleicons.org/instagram"},
     "youtube": {"label": "YouTube", "icon": "https://cdn.simpleicons.org/youtube"},
-    "linkedin": {"label": "LinkedIn", "icon": "https://cdn.simpleicons.org/linkedin"},
+    "linkedin": {"label": "LinkedIn", "icon": "img/social/linkedin.svg"},
     "steam": {"label": "Steam", "icon": "https://cdn.simpleicons.org/steam"},
-    "email": {"label": "邮箱", "icon": "✉"},
+    "email": {"label": "邮箱", "icon": "img/social/email.svg"},
 }
 
 

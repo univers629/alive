@@ -138,6 +138,12 @@
 .profile-social-link img {
   width: 17px;
   height: 17px;
+  display: block;
+  object-fit: contain;
+}
+
+:root[data-color-mode="dark"] .profile-social-link img {
+  filter: invert(1) brightness(1.45);
 }
 
 .profile-social-link > span:last-child {
@@ -148,10 +154,6 @@
   clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-.profile-social-link__fallback {
-  font: 700 1rem/1 "Segoe UI Symbol", sans-serif;
 }
 
 .status-hero {

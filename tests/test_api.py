@@ -523,9 +523,17 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
 
         footer = client.get("/").text
         assert 'href="https://github.com/Alive-Project"' in footer
-        assert "img/alive-project-icon.png" in footer
+        assert "img/alive-project-icon-16.webp" in footer
         assert 'loading="lazy" decoding="async"' in footer
         assert "cdn.simpleicons.org" not in footer
+        project_icon = Path(main.u.get_path("theme/default/static/img/alive-project-icon-16.webp"))
+        with Image.open(project_icon) as image:
+            assert image.format == "WEBP"
+            assert image.size == (16, 16)
+        for icon_name in ("website.svg", "douyin.svg", "linkedin.svg", "email.svg"):
+            social_icon = client.get(f"/static/img/social/{icon_name}")
+            assert social_icon.status_code == 200
+            assert social_icon.headers["content-type"] == "image/svg+xml"
 
         device_css = client.get("/static/device-cards.css").text
         assert ".health-overview__grid {" in device_css
@@ -540,6 +548,9 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         tablet_css = client.get("/static/main.css").text
         assert "width: 27px;" in tablet_css
         assert "#4ebbed;" in tablet_css
+        footer_css = client.get("/static/site-footer.css").text
+        assert "var(--alive-ink) 74%" in footer_css
+        assert "var(--alive-ink) 22%, transparent" in footer_css
 
         details = client.get("/details")
         assert details.status_code == 200
