@@ -142,11 +142,6 @@ body.music-island-visible.music-island-expanded .comment-wall__stage {
   animation: comment-wall-flight-rtl var(--flight-duration, 14s) linear forwards;
 }
 
-.comment-wall__bullet--ltr {
-  right: 100%;
-  animation: comment-wall-flight-ltr var(--flight-duration, 14s) linear forwards;
-}
-
 .comment-wall__bullet strong {
   color: var(--bullet-color, #b6aaff);
   font-weight: 720;
@@ -377,11 +372,6 @@ body.music-island-visible.music-island-expanded .comment-wall__stage {
 @keyframes comment-wall-flight-rtl {
   from { transform: translateX(18px); }
   to { transform: translateX(calc(-100vw - 100%)); }
-}
-
-@keyframes comment-wall-flight-ltr {
-  from { transform: translateX(-18px); }
-  to { transform: translateX(calc(100vw + 100%)); }
 }
 
 @media (max-width: 760px) {

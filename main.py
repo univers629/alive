@@ -597,6 +597,45 @@ def profile_avatar(request: Request, size: int = 256):
     )
 
 
+def _resized_public_image(file: Path, size: int) -> Response:
+    """Serve a small WebP derivative for fixed-size UI images without storing copies."""
+    size = max(16, min(int(size), 256))
+    cache_control = "public, max-age=31536000, immutable"
+    try:
+        with Image.open(file) as source:
+            if source.width <= size and source.height <= size:
+                return FileResponse(
+                    file,
+                    media_type=guess_type(file.name)[0],
+                    headers={"Cache-Control": cache_control},
+                )
+            image = source.convert("RGBA")
+            image.thumbnail((size, size), Image.Resampling.LANCZOS)
+            output = io.BytesIO()
+            image.save(output, format="WEBP", quality=82, method=6)
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise HTTPException(status_code=404) from None
+    return Response(
+        content=output.getvalue(),
+        media_type="image/webp",
+        headers={"Cache-Control": cache_control},
+    )
+
+
+@app.get("/app-icons/{filename:path}", include_in_schema=False)
+def app_icon(filename: str, size: int | None = None):
+    file = _safe_file(Path(u.get_path("data/public/app-icons", is_dir=True)), filename)
+    if file is None or file.suffix.lower() not in {".png", ".jpg", ".webp"}:
+        raise HTTPException(status_code=404)
+    if size is not None:
+        return _resized_public_image(file, size)
+    return FileResponse(
+        file,
+        media_type=guess_type(file.name)[0],
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
+
+
 @app.get("/docs", response_class=HTMLResponse, include_in_schema=False)
 def documentation():
     return FileResponse(

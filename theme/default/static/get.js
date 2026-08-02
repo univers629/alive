@@ -94,6 +94,17 @@ function setTextIfChanged(element, value) {
     if (element && element.textContent !== text) element.textContent = text;
 }
 
+function optimizedAppIconUrl(value, size = 48) {
+    try {
+        const url = new URL(value, window.location.origin);
+        if (url.origin === window.location.origin && url.pathname.startsWith('/app-icons/')) {
+            url.searchParams.set('size', String(size));
+            return `${url.pathname}${url.search}`;
+        }
+    } catch (error) { /* Keep an invalid or external URL unchanged so its error handler can run. */ }
+    return value;
+}
+
 function createDeviceCard(device, index, timeout, now, deviceIcons) {
     const card = document.createElement('article');
     card.className = 'device-card';
@@ -156,7 +167,7 @@ function updateDeviceCard(card, device, index, timeout, now, deviceIcons) {
     setTextIfChanged(card.querySelector('.device-card__state > span'), stateLabel);
 
     const appIcon = card.querySelector('.device-card__app-icon');
-    const appIconUrl = String(fields.app_icon_url || '');
+    const appIconUrl = optimizedAppIconUrl(String(fields.app_icon_url || ''));
     const existingImage = appIcon.querySelector('img');
     appIcon.classList.toggle('has-image', Boolean(appIconUrl));
     if (appIconUrl) {

@@ -25,6 +25,16 @@
   let datePickerLevel = 'year';
 
   function setText(id, value) { const element = document.getElementById(id); if (element) element.textContent = String(value); }
+  function optimizedAppIconUrl(value, size = 48) {
+    try {
+      const url = new URL(value, window.location.origin);
+      if (url.origin === window.location.origin && url.pathname.startsWith('/app-icons/')) {
+        url.searchParams.set('size', String(size));
+        return `${url.pathname}${url.search}`;
+      }
+    } catch (error) { /* Keep an invalid or external URL unchanged so its error handler can run. */ }
+    return value;
+  }
   function relativeTime(timestamp) {
     const seconds = Math.max(0, Date.now() / 1000 - Number(timestamp || 0));
     if (seconds < 60) return '刚刚更新';
@@ -101,7 +111,7 @@
     if (record.app_icon_url) {
       icon.classList.add('has-image');
       const image = document.createElement('img');
-      image.src = record.app_icon_url; image.alt = ''; image.loading = 'lazy'; image.decoding = 'async';
+      image.src = optimizedAppIconUrl(record.app_icon_url); image.alt = ''; image.width = 42; image.height = 42; image.loading = 'lazy'; image.decoding = 'async';
       image.addEventListener('error', () => { image.remove(); icon.classList.remove('has-image'); icon.textContent = fallback; }, { once: true });
       icon.append(image);
     } else icon.textContent = fallback;
@@ -234,7 +244,7 @@
     setText('metric-online', `${payload.device_counts.online} / ${payload.device_counts.total}`); setText('metric-daily', payload.visits.daily); setText('details-activity-period-label', activity.date_label || '当前周期');
     setText('device-active-count', payload.device_counts.active); setText('device-idle-count', payload.device_counts.idle); setText('device-offline-count', payload.device_counts.offline); setText('fact-status', payload.status.name); setText('fact-online', `${payload.device_counts.online} / ${payload.device_counts.total}`);
     setText('fact-music', payload.music.active ? `${payload.music.title} · ${payload.music.artist || '未知艺术家'}` : '当前未播放'); setText('fact-comments', `${payload.comments.total} 条`);
-    activityTabs.forEach((tab) => tab.setAttribute('aria-selected', String(tab.dataset.activityCategory === selectedActivityCategory))); periodTabs.forEach((tab) => tab.setAttribute('aria-selected', String(tab.dataset.activityPeriod === selectedPeriod)));
+    activityTabs.forEach((tab) => tab.setAttribute('aria-pressed', String(tab.dataset.activityCategory === selectedActivityCategory))); periodTabs.forEach((tab) => tab.setAttribute('aria-pressed', String(tab.dataset.activityPeriod === selectedPeriod)));
     renderActivities(selectedActivity); renderDonut(selectedActivity); renderBars(selectedActivity); renderAppRanking(selectedActivity); renderDevices();
   }
   async function refresh() {

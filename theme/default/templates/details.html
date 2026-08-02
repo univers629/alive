@@ -25,11 +25,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='page-shell.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='color-mode.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='site-chrome.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="{{ url_for('static', filename='details.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='site-footer.css') }}" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="{{ url_for('static', filename='music-island.css') }}" media="print" onload="this.media='all'">
     <noscript>
+        <link rel="stylesheet" href="{{ url_for('static', filename='glass-select.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='site-footer.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='music-island.css') }}">
     </noscript>
@@ -86,14 +87,14 @@
                     <h2 id="details-activities-title">最近应用活动</h2>
                 </div>
                 <div class="details-activity-controls">
-                    <div class="details-activity-tabs" role="tablist" aria-label="活动设备类型">
-                        <button type="button" data-activity-category="mobile" aria-selected="true">移动设备</button>
-                        <button type="button" data-activity-category="desktop" aria-selected="false">电脑</button>
+                    <div class="details-activity-tabs" role="group" aria-label="活动设备类型">
+                        <button type="button" data-activity-category="mobile" aria-pressed="true">移动设备</button>
+                        <button type="button" data-activity-category="desktop" aria-pressed="false">电脑</button>
                     </div>
-                    <div class="details-activity-tabs" role="tablist" aria-label="统计周期">
-                        <button type="button" data-activity-period="daily" aria-selected="true">日</button>
-                        <button type="button" data-activity-period="weekly" aria-selected="false">周</button>
-                        <button type="button" data-activity-period="monthly" aria-selected="false">月</button>
+                    <div class="details-activity-tabs" role="group" aria-label="统计周期">
+                        <button type="button" data-activity-period="daily" aria-pressed="true">日</button>
+                        <button type="button" data-activity-period="weekly" aria-pressed="false">周</button>
+                        <button type="button" data-activity-period="monthly" aria-pressed="false">月</button>
                     </div>
                     <div class="details-activity-period">
                         <button type="button" class="details-period-nav" id="details-period-prev" aria-label="上一周期">‹</button>

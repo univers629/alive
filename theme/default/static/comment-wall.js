@@ -102,13 +102,12 @@
     elements.count.textContent = `展示 ${comments.length} / ${commentDisplayLimit} 条`;
   }
 
-  function launchDanmaku(comment, direction = 'rtl') {
+  function launchDanmaku(comment) {
     if (!danmakuEnabled || !comment) return;
     const bullet = document.createElement('span');
-    const normalizedDirection = direction === 'ltr' ? 'ltr' : 'rtl';
     const stageHeight = Math.max(80, elements.stage.clientHeight);
     const laneSpace = Math.max(42, stageHeight - 46);
-    bullet.className = `comment-wall__bullet comment-wall__bullet--${normalizedDirection}`;
+    bullet.className = 'comment-wall__bullet comment-wall__bullet--rtl';
     bullet.style.top = `${8 + ((lane * 53 + Math.floor(Math.random() * 23)) % laneSpace)}px`;
     bullet.style.setProperty('--bullet-color', colors[comment.color] || colors.violet);
     bullet.style.setProperty('--flight-duration', `${13 + (Number(comment.id) % 5)}s`);
@@ -130,7 +129,7 @@
     const queue = [...comments].sort(() => Math.random() - .5).slice(0, replayCount);
     queue.forEach((comment, index) => {
       window.setTimeout(() => {
-        launchDanmaku(comment, Math.random() < .5 ? 'rtl' : 'ltr');
+        launchDanmaku(comment);
       }, index * 700);
     });
   }

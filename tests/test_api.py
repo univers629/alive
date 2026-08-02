@@ -89,7 +89,10 @@ def test_post_only_mutations_and_public_reads():
         assert unauthorized.status_code == 401
 
         headers = {"Authorization": "Bearer test-secret-1234"}
-        icon = b"\x89PNG\r\n\x1a\n" + b"alive-app-icon"
+        icon_image = Image.new("RGBA", (128, 96), (24, 120, 220, 255))
+        icon_stream = io.BytesIO()
+        icon_image.save(icon_stream, format="PNG")
+        icon = icon_stream.getvalue()
         uploaded_icon = client.post(
             "/api/device/app-icon",
             headers={**headers, "Content-Type": "image/png"},
@@ -97,6 +100,12 @@ def test_post_only_mutations_and_public_reads():
         )
         assert uploaded_icon.status_code == 200
         assert uploaded_icon.json()["url"].startswith("/app-icons/")
+        resized_icon = client.get(f"{uploaded_icon.json()['url']}?size=32")
+        assert resized_icon.status_code == 200
+        assert resized_icon.headers["cache-control"] == "public, max-age=31536000, immutable"
+        assert resized_icon.headers["content-type"] == "image/webp"
+        with Image.open(io.BytesIO(resized_icon.content)) as resized:
+            assert resized.size == (32, 24)
         Path(
             main.u.get_path(
                 "data/public/" + uploaded_icon.json()["url"].lstrip("/")
@@ -496,7 +505,7 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert ".comment-wall__stage {\n  position: fixed;" in danmaku_css
         assert "z-index: 1150;" in danmaku_css
         assert "comment-wall-flight-rtl" in danmaku_css
-        assert "comment-wall-flight-ltr" in danmaku_css
+        assert "comment-wall-flight-ltr" not in danmaku_css
         assert ".comment-wall__list::-webkit-scrollbar-track {" in danmaku_css
         assert "scrollbar-color:" in danmaku_css
 
@@ -507,6 +516,7 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert "function launchNewDanmaku(commentsToLaunch)" in danmaku_js
         assert "if (replayTimer && activeReplayInterval === replayInterval) return;" in danmaku_js
         assert "if (newComments.length) launchNewDanmaku(newComments);" in danmaku_js
+        assert "Math.random() < .5 ? 'rtl' : 'ltr'" not in danmaku_js
         assert "launchDanmaku(payload.comment);" in danmaku_js
         assert ".comment-wall__item--pinned" in danmaku_css
         assert "window.setInterval(replayDanmakuBatch, replayInterval * 1000)" in danmaku_js
@@ -515,6 +525,7 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert 'href="https://github.com/Alive-Project"' in footer
         assert "img/alive-project-icon.png" in footer
         assert 'loading="lazy" decoding="async"' in footer
+        assert "cdn.simpleicons.org" not in footer
 
         device_css = client.get("/static/device-cards.css").text
         assert ".health-overview__grid {" in device_css
@@ -529,6 +540,15 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         tablet_css = client.get("/static/main.css").text
         assert "width: 27px;" in tablet_css
         assert "#4ebbed;" in tablet_css
+
+        details = client.get("/details")
+        assert details.status_code == 200
+        assert 'role="tablist"' not in details.text
+        assert 'aria-pressed="true"' in details.text
+        assert "glass-select.css" in details.text
+        details_js = client.get("/static/details.js").text
+        assert "function optimizedAppIconUrl(value, size = 48)" in details_js
+        assert "image.width = 42; image.height = 42;" in details_js
 
         select_css = client.get("/static/glass-select.css").text
         assert "border-radius: 999px;" in select_css

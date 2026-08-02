@@ -27,7 +27,7 @@
 }
 
 .site-footer__lead {
-  color: var(--alive-faint);
+  color: color-mix(in srgb, var(--alive-ink) 68%, var(--alive-muted));
 }
 
 .site-footer__stack {
@@ -41,6 +41,24 @@
   display: block;
   object-fit: contain;
 }
+
+.site-footer__tech-icon {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: #fff;
+  border-radius: 5px;
+  background: #4c6ef5;
+  font: 800 .52rem/1 "Segoe UI Variable", sans-serif;
+  letter-spacing: -.04em;
+}
+
+.site-footer__tech-icon--python { background: #3776ab; }
+.site-footer__tech-icon--fastapi { background: #009688; }
+.site-footer__tech-icon--sqlite { background: #003b57; font-size: .45rem; }
+.site-footer__tech-icon--docker { background: #2496ed; }
 
 .site-footer__links {
   flex: none;

@@ -165,7 +165,7 @@
   cursor: pointer;
 }
 
-.details-activity-tabs button[aria-selected="true"] {
+.details-activity-tabs button[aria-pressed="true"] {
   color: var(--alive-ink);
   border-color: var(--alive-border-soft);
   background: color-mix(in srgb, var(--alive-surface) 72%, transparent);
