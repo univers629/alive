@@ -30,7 +30,7 @@
   let comments = [];
   let lane = 0;
   let replayTimer = null;
-  let hasLoadedComments = false;
+  let activeReplayInterval = null;
   let serverEnabled = root.dataset.serverEnabled === 'true';
   let danmakuEnabled = serverEnabled && localStorage.getItem('alive-danmaku') !== 'off';
 
@@ -136,8 +136,10 @@
   }
 
   function resetDanmakuTimer() {
+    if (replayTimer && activeReplayInterval === replayInterval) return;
     if (replayTimer) window.clearInterval(replayTimer);
     replayTimer = window.setInterval(replayDanmakuBatch, replayInterval * 1000);
+    activeReplayInterval = replayInterval;
   }
 
   function launchNewDanmaku(commentsToLaunch) {
@@ -168,8 +170,7 @@
       incoming.forEach((comment) => knownIds.add(comment.id));
       comments = incoming;
       renderComments();
-      if (hasLoadedComments && newComments.length) launchNewDanmaku(newComments);
-      hasLoadedComments = true;
+      if (newComments.length) launchNewDanmaku(newComments);
     } catch (error) {
       if (!comments.length) {
         elements.list.innerHTML = '<li class="comment-wall__empty">暂时无法读取评论，请稍后重试。</li>';

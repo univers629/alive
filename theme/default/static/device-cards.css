@@ -284,7 +284,17 @@
 }
 
 .device-card--offline {
-  opacity: .72;
+  opacity: .46;
+  border-color: color-mix(in srgb, var(--alive-border, rgba(255, 255, 255, .7)) 52%, transparent);
+  background: var(--alive-surface-soft, rgba(255, 255, 255, .3));
+  box-shadow: none;
+  filter: grayscale(.72) saturate(.28);
+}
+
+.device-card--offline:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--alive-border, rgba(255, 255, 255, .7)) 52%, transparent);
+  box-shadow: none;
 }
 
 .device-card--idle .device-card__name strong,
