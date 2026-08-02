@@ -2,48 +2,72 @@
 
 一个用 FastAPI 编写的个人在线状态页，提供公开状态页、设备与音乐上报 API、浏览器管理后台和 SQLite 持久化存储。
 
-## Docker 部署
+## 首次 Docker 部署
 
-1. 复制环境变量示例：
+在项目目录执行：
 
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+cp .env.example .env
+nano .env
+```
 
-2. 编辑 `.env`，填写初始值：
+`.env` 中必须填写：
 
-   ```bash
-   nano .env
-   ```
+| 变量 | 说明 |
+| --- | --- |
+| `ALIVE_SECRET` | 全局密钥，至少 6 位。后台登录和所有上报客户端使用同一个值，建议使用长随机字符串。 |
+| `ALIVE_PAGE_NAME` | 首页展示的用户名。 |
 
-   必须设置的项目：
+服务器可选变量：
 
-   | 变量 | 说明 |
-   | --- | --- |
-   | `ALIVE_SECRET` | 全局密钥，至少 6 位，后台和所有客户端共用，建议使用长随机值 |
-   | `ALIVE_PAGE_NAME` | 首页展示的用户名 |
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `ALIVE_PORT` | `9010` | Docker 对外端口，也是容器内 Alive 监听端口。 |
+| `ALIVE_MUSIC_LIBRARY_HOST` | `./data/music-library` | 宿主机音乐库目录，挂载到容器内 `/alive/music-library`。请填写服务器上的实际绝对路径或相对项目目录的路径。 |
 
-   可选项目：`ALIVE_PORT`（Docker 对外端口及服务监听端口，默认 `9010`）、`ALIVE_SERVER`（远程服务器地址）、`ALIVE_MUSIC_LIBRARY_HOST`（音乐目录）、`ALIVE_MUSIC_DIR`（Windows 音乐上报扫描目录）。
+例如：
 
-   例如改用 `18010`：
+```env
+ALIVE_PORT=18010
+ALIVE_MUSIC_LIBRARY_HOST=/srv/alive/music-library
+```
 
-   ```env
-   ALIVE_PORT=18010
-   ```
+然后构建并启动：
 
-   未设置 `ALIVE_PORT` 时，容器内外继续使用 `9010`，因此现有部署直接更新不会受影响。
+```bash
+sudo docker compose up -d --build
+```
 
-3. 构建并启动：
+反向代理时，将域名转发到 `127.0.0.1:ALIVE_PORT`。未设置 `ALIVE_PORT` 时即为 `127.0.0.1:9010`。
 
-   ```bash
-   sudo docker compose up -d --build
-   ```
+## 音乐的两条线路
 
-   音乐原文件会保留在 `ALIVE_MUSIC_LIBRARY_HOST`。服务会在上传完成后、以及每次启动时后台生成 128kbps AAC 流媒体缓存；缓存不出现在后台音乐库列表，删除原曲时会一并删除。
+### 网易云在线流媒体
 
-3. 准备网页：
+上报 `source_mode=netease-api` 和网易云歌曲 ID 后，Alive 通过现有网易云解析链路取得在线 `audio_url`、封面与歌词。此链路不下载音乐文件，不写入 `ALIVE_MUSIC_LIBRARY_HOST`，也不经过本地压缩缓存。
 
-   配置反向代理与域名等
+### 本地播放器上报与同听
+
+任意支持 Alive 本地上报协议的本地播放器插件或客户端均可使用。它会先立即上报歌名、艺术家和歌词，随后按配置决定是否上传当前本地音乐文件。
+
+- 插件必须在设置页明确选择允许上传的本地文件夹；未选择时不能开启音频上传。
+- 新上传文件保留原文件名，直接放进服务器音乐库根目录；同名但内容不同才会附加短后缀。
+- 原始文件始终保留。服务器以单个后台任务生成 128kbps AAC 缓存，网页同听优先读取缓存；缓存未完成时临时读取原文件。
+- 缓存会复制可支持的内嵌元数据、封面和歌词，不显示在后台音乐库，也会在删除原曲时一并删除。
+- 手动放入 `ALIVE_MUSIC_LIBRARY_HOST` 的音乐不会被改名或移动；服务重启后会在后台检查并补齐缓存。
+
+`ALIVE_SERVER` 和 `ALIVE_MUSIC_DIR` 仅供仓库内旧版 Windows 上报脚本读取，Docker 服务本身不使用它们。本地播放器插件或客户端的服务器地址、密钥和允许上传文件夹在各自设置页配置。
+
+## 后续更新
+
+在项目目录依次执行以下两条命令：
+
+```bash
+git pull --ff-only
+sudo docker compose up -d --build
+```
+
+第二条会重建镜像并重启服务，同时保留 `./data` 和 `ALIVE_MUSIC_LIBRARY_HOST` 中的持久化数据。若本次更新包含本地播放器插件改动，再重新导入最新插件包。
 
 ## 致谢
 
