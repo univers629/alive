@@ -422,7 +422,10 @@ def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path)
             state = client.post(
                 "/api/music/set",
                 headers=headers,
-                json={"title": "正在播放", "library_path": current_path, "playing": True},
+                json={
+                    "title": "正在播放", "artist": "Salt Player", "album": "测试专辑",
+                    "library_path": current_path, "playing": True,
+                },
             )
             assert state.status_code == 200
 
@@ -430,6 +433,9 @@ def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path)
             assert listing.status_code == 200
             tracks = {track["library_path"]: track for track in listing.json()["tracks"]}
             assert tracks[current_path]["active"] is True
+            assert tracks[current_path]["title"] == "正在播放"
+            assert tracks[current_path]["artist"] == "Salt Player"
+            assert tracks[current_path]["album"] == "测试专辑"
             assert tracks[other_path]["active"] is False
 
             protected = client.post(

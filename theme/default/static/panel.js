@@ -94,7 +94,7 @@ function renderMusicLibrary() {
     if (!tracks.length) {
         const row = document.createElement('tr');
         const cell = document.createElement('td');
-        cell.colSpan = 5;
+        cell.colSpan = 8;
         cell.className = 'empty-row';
         cell.textContent = '音乐库暂无已上传文件。';
         row.appendChild(cell);
@@ -103,7 +103,11 @@ function renderMusicLibrary() {
     }
     tracks.forEach((track) => {
         const row = document.createElement('tr');
-        const values = [track.library_path, formatMusicBytes(track.size), formatMusicTime(track.modified_at), track.active ? '当前使用中' : '可删除'];
+        const values = [
+            track.title || '未记录', track.artist || '未记录', track.album || '—',
+            track.library_path, formatMusicBytes(track.size), formatMusicTime(track.modified_at),
+            track.active ? '当前使用中' : '可删除'
+        ];
         values.forEach((value) => {
             const cell = document.createElement('td');
             cell.textContent = String(value || '');

@@ -1057,6 +1057,9 @@ def _music_library_snapshot() -> dict:
                 }
             )
     tracks.sort(key=lambda item: item["modified_at"], reverse=True)
+    metadata = d.music_library_metadata([track["library_path"] for track in tracks])
+    for track in tracks:
+        track.update(metadata.get(track["library_path"], {}))
     return {
         "success": True,
         "music_library": str(root),
@@ -1483,11 +1486,11 @@ async def admin_music_library_delete(request: Request):
     if any(relative == active_path for relative, _ in normalized):
         raise u.APIUnsuccessful(409, "clear or switch the current music before deleting its audio file")
     root = _music_library_root()
-    deleted = 0
-    for _, file in normalized:
+    deleted_paths = []
+    for relative, file in normalized:
         try:
             file.unlink()
-            deleted += 1
+            deleted_paths.append(relative)
         except FileNotFoundError:
             continue
         except OSError as error:
@@ -1499,8 +1502,9 @@ async def admin_music_library_delete(request: Request):
             except OSError:
                 break
             parent = parent.parent
+    d.remove_music_library_metadata(deleted_paths)
     snapshot = _music_library_snapshot()
-    snapshot["deleted"] = deleted
+    snapshot["deleted"] = len(deleted_paths)
     return snapshot
 
 

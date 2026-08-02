@@ -131,6 +131,18 @@ class _MusicPlayerMetaData(Base):
     library_path: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
 
+class _MusicLibraryTrackData(Base):
+    """Metadata index for content-addressed files in the private music library."""
+
+    __tablename__ = "music_library_tracks"
+
+    library_path: Mapped[str] = mapped_column(Text, primary_key=True)
+    title: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    artist: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    album: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    updated_at: Mapped[float] = mapped_column(Float, nullable=False, default=time)
+
+
 class _MusicSourceData(Base):
     __tablename__ = "music_source"
 
@@ -1419,6 +1431,15 @@ class Data:
             meta.player_icon = payload.get("player_icon", "media-player")
             meta.player_icon_url = payload.get("player_icon_url", "")
             meta.library_path = payload.get("library_path", "")
+            if meta.library_path:
+                track = session.get(_MusicLibraryTrackData, meta.library_path)
+                if track is None:
+                    track = _MusicLibraryTrackData(library_path=meta.library_path)
+                    session.add(track)
+                track.title = state.title
+                track.artist = state.artist
+                track.album = state.album
+                track.updated_at = now
             source.source_mode = source_mode
             source.source_id = payload.get("source_id", "")
             source.status = payload.get("source_status", "")
@@ -1475,6 +1496,33 @@ class Data:
             ):
                 return ""
             return meta.library_path
+
+    def music_library_metadata(self, paths: list[str]) -> dict[str, dict[str, Any]]:
+        """Look up catalogued tags without touching or scanning audio files."""
+        if not paths:
+            return {}
+        with self.session() as session:
+            rows = session.scalars(
+                select(_MusicLibraryTrackData).where(_MusicLibraryTrackData.library_path.in_(paths))
+            ).all()
+            return {
+                row.library_path: {
+                    "title": row.title,
+                    "artist": row.artist,
+                    "album": row.album,
+                    "updated_at": row.updated_at,
+                }
+                for row in rows
+            }
+
+    def remove_music_library_metadata(self, paths: list[str]) -> None:
+        if not paths:
+            return
+        with self._write_lock, self.session() as session:
+            for path in paths:
+                row = session.get(_MusicLibraryTrackData, path)
+                if row is not None:
+                    session.delete(row)
 
     def music_audio_path(self, token: str) -> Path | None:
         with self.session() as session:
