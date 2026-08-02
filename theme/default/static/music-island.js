@@ -75,6 +75,15 @@
             .sort((left, right) => left.time - right.time);
     }
 
+    function lyricsSignature(lyrics) {
+        if (!Array.isArray(lyrics)) return '';
+        return lyrics.map((line) => [
+            Number(line?.time || 0),
+            String(line?.text || ''),
+            String(line?.translation || '')
+        ].join('\u0000')).join('\u0001');
+    }
+
     function updateLyric(position) {
         const lyrics = normalizedLyrics();
         let nextIndex = -1;
@@ -201,8 +210,10 @@
         const previousSong = state
             ? `${state.source_id || ''}|${state.title || ''}|${state.artist || ''}`
             : '';
+        const previousLyrics = lyricsSignature(state?.lyrics);
         state = nextState;
         const nextSong = `${state.source_id || ''}|${state.title || ''}|${state.artist || ''}`;
+        const lyricsChanged = lyricsSignature(state.lyrics) !== previousLyrics;
         document.body.classList.add('music-island-visible');
         root.hidden = false;
         root.classList.toggle('is-playing', Boolean(state.playing));
@@ -221,7 +232,7 @@
             }
         }
 
-        lyricIndex = -1;
+        if (nextSong !== previousSong || lyricsChanged) lyricIndex = -1;
         updateJoinButton();
         updateProgress();
     }

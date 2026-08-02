@@ -80,6 +80,7 @@ class MusicTrackCheckModel(BaseModel):
     sha256: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
     suffix: Literal[".flac", ".mp3", ".m4a", ".wav", ".ogg", ".opus"]
     size: int = Field(gt=0)
+    relative_path: str = Field(default="", max_length=4096)
 
 
 class HealthStateUpdateModel(BaseModel):

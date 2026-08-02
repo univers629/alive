@@ -5,12 +5,14 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import hmac
 import io
 import json
 import logging
 import os
+import re
 import secrets
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
@@ -1011,16 +1013,79 @@ _music_stream_jobs_lock = Lock()
 _music_stream_backfill_running = False
 
 
-def _music_track_location(digest: str, suffix: str) -> tuple[str, Path]:
+def _decode_music_relative_path(encoded: str, suffix: str) -> str:
+    if not encoded or len(encoded) > 4096:
+        return ""
+    try:
+        padded = encoded + "=" * (-len(encoded) % 4)
+        value = base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")
+    except (UnicodeDecodeError, ValueError):
+        return ""
+    parts = value.replace("\\", "/").split("/")
+    if not parts or len(parts) > 24:
+        return ""
+    cleaned = []
+    for part in parts:
+        if part in {"", ".", ".."}:
+            return ""
+        safe_part = re.sub(r'[<>:"/\\|?*\x00-\x1f]', " ", part).strip(" .")
+        if not safe_part:
+            return ""
+        cleaned.append(safe_part[:180])
+    filename = Path(cleaned[-1])
+    stem = filename.stem.strip() or "untitled"
+    if filename.suffix.casefold() != suffix:
+        cleaned[-1] = f"{stem}{suffix}"
+    relative = "/".join(cleaned)
+    return relative if len(relative) <= 2048 else ""
+
+
+def _music_upload_marker(destination: Path) -> Path:
+    return destination.with_name(f".{destination.name}.alive-upload.json")
+
+
+def _music_upload_marker_digest(destination: Path) -> str:
+    try:
+        payload = json.loads(_music_upload_marker(destination).read_text(encoding="utf-8"))
+        digest = str(payload.get("sha256", "")).casefold()
+        return digest if len(digest) == 64 else ""
+    except (OSError, ValueError, TypeError):
+        return ""
+
+
+def _write_music_upload_marker(destination: Path, digest: str) -> None:
+    marker = _music_upload_marker(destination)
+    temporary = marker.with_name(f".{marker.name}.{secrets.token_hex(8)}.part")
+    try:
+        temporary.write_text(json.dumps({"sha256": digest}), encoding="utf-8")
+        temporary.replace(marker)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _music_track_location(digest: str, suffix: str, encoded_relative: str = "") -> tuple[str, Path]:
     safe_digest = digest.casefold()
     safe_suffix = suffix.casefold()
-    relative = f"{safe_digest[:2]}/{safe_digest}{safe_suffix}"
-    root = Path(u.get_path(d.music_library, is_dir=True)).resolve()
+    relative = _decode_music_relative_path(encoded_relative, safe_suffix)
+    root = _music_library_root()
+    if not relative:
+        # Compatible fallback for older reporters which did not send a source path.
+        relative = f"{safe_digest[:2]}/{safe_digest}{safe_suffix}"
     destination = (root / relative).resolve()
     try:
         destination.relative_to(root)
     except ValueError as exc:
         raise u.APIUnsuccessful(400, "invalid audio identity") from exc
+    if encoded_relative and destination.exists() and _music_upload_marker_digest(destination) != safe_digest:
+        original = destination
+        for number in range(0, 1000):
+            suffix_text = f" ({safe_digest[:8]})" if number == 0 else f" ({safe_digest[:8]}-{number + 1})"
+            destination = original.with_name(f"{original.stem}{suffix_text}{safe_suffix}")
+            if not destination.exists() or _music_upload_marker_digest(destination) == safe_digest:
+                relative = destination.relative_to(root).as_posix()
+                break
+        else:
+            raise u.APIUnsuccessful(409, "too many music files share the same name")
     return relative, destination
 
 
@@ -1028,8 +1093,8 @@ def _music_library_root() -> Path:
     return Path(u.get_path(d.music_library, is_dir=True)).resolve()
 
 
-def _music_stream_cache_file(source: Path) -> Path | None:
-    root = _music_library_root()
+def _music_stream_cache_file(source: Path, root: Path | None = None) -> Path | None:
+    root = root or _music_library_root()
     try:
         relative = source.resolve().relative_to(root).as_posix()
     except (OSError, ValueError):
@@ -1045,10 +1110,11 @@ def _music_stream_cache_ready(source: Path, cache: Path) -> bool:
         return False
 
 
-def _transcode_music_stream(source: Path, job_key: str) -> None:
+def _transcode_music_stream(source: Path, job_key: str, root: Path | None = None) -> None:
     temporary: Path | None = None
     try:
-        cache = _music_stream_cache_file(source)
+        root = root or _music_library_root()
+        cache = _music_stream_cache_file(source, root)
         if cache is None or _music_stream_cache_ready(source, cache) or not source.is_file():
             return
         source_info = source.stat()
@@ -1090,8 +1156,9 @@ def _transcode_music_stream(source: Path, job_key: str) -> None:
             _music_stream_jobs.discard(job_key)
 
 
-def _schedule_music_stream_transcode(source: Path) -> None:
-    cache = _music_stream_cache_file(source)
+def _schedule_music_stream_transcode(source: Path, root: Path | None = None) -> None:
+    root = root or _music_library_root()
+    cache = _music_stream_cache_file(source, root)
     if cache is None or _music_stream_cache_ready(source, cache):
         return
     try:
@@ -1103,7 +1170,7 @@ def _schedule_music_stream_transcode(source: Path) -> None:
             return
         _music_stream_jobs.add(job_key)
     try:
-        _music_stream_executor.submit(_transcode_music_stream, source, job_key)
+        _music_stream_executor.submit(_transcode_music_stream, source, job_key, root)
     except RuntimeError:
         with _music_stream_jobs_lock:
             _music_stream_jobs.discard(job_key)
@@ -1124,7 +1191,7 @@ def _backfill_music_stream_cache() -> None:
                 continue
             if relative.parts and relative.parts[0] == MUSIC_STREAM_CACHE_DIR:
                 continue
-            _transcode_music_stream(source, str(source.resolve()))
+            _transcode_music_stream(source, str(source.resolve()), root)
     except OSError as error:
         l.warning("Unable to inspect music stream cache: %s", error)
     finally:
@@ -1146,10 +1213,11 @@ def _schedule_music_stream_cache_backfill() -> None:
 
 
 def _preferred_music_stream(source: Path) -> Path:
-    cache = _music_stream_cache_file(source)
+    root = _music_library_root()
+    cache = _music_stream_cache_file(source, root)
     if cache is not None and _music_stream_cache_ready(source, cache):
         return cache
-    _schedule_music_stream_transcode(source)
+    _schedule_music_stream_transcode(source, root)
     return source
 
 
@@ -1272,7 +1340,7 @@ def music_track_check(payload: MusicTrackCheckModel):
             413,
             f"audio exceeds the configured {c.main.music_upload_max_mb} MiB limit",
         )
-    relative, destination = _music_track_location(payload.sha256, payload.suffix)
+    relative, destination = _music_track_location(payload.sha256, payload.suffix, payload.relative_path)
     exists = destination.is_file() and destination.stat().st_size == payload.size
     return {
         "success": True,
@@ -1291,6 +1359,7 @@ def music_track_check(payload: MusicTrackCheckModel):
 async def music_track_upload(request: Request):
     digest = request.headers.get("X-Alive-Audio-Sha256", "").casefold()
     suffix = request.headers.get("X-Alive-Audio-Suffix", "").casefold()
+    relative_path = request.headers.get("X-Alive-Audio-Relative-Path", "")
     if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
         raise u.APIUnsuccessful(400, "X-Alive-Audio-Sha256 must be 64 hexadecimal characters")
     if suffix not in MUSIC_AUDIO_TYPES:
@@ -1309,7 +1378,7 @@ async def music_track_upload(request: Request):
             f"audio exceeds the configured {c.main.music_upload_max_mb} MiB limit",
         )
 
-    relative, destination = _music_track_location(digest, suffix)
+    relative, destination = _music_track_location(digest, suffix, relative_path)
     if destination.is_file() and destination.stat().st_size == advertised_size:
         _schedule_music_stream_transcode(destination)
         return {
@@ -1345,6 +1414,7 @@ async def music_track_upload(request: Request):
         if not _valid_audio_container(temporary, suffix):
             raise u.APIUnsuccessful(415, "uploaded bytes do not match the audio suffix")
         temporary.replace(destination)
+        _write_music_upload_marker(destination, digest)
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -1671,6 +1741,7 @@ async def admin_music_library_delete(request: Request):
         cache = _music_stream_cache_file(file)
         if cache is not None:
             cache.unlink(missing_ok=True)
+        _music_upload_marker(file).unlink(missing_ok=True)
         parent = file.parent
         while parent != root:
             try:

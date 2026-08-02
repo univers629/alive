@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import io
 import hashlib
 import json
@@ -353,13 +354,14 @@ def test_music_track_is_deduplicated_uploaded_and_publicly_streamed(tmp_path):
     main.c.main.music_library = str(tmp_path / "music-library")
     audio = b"ID3" + b"\x04\x00\x00\x00\x00\x00\x00" + b"alive-audio-test"
     digest = hashlib.sha256(audio).hexdigest()
+    relative_path = base64.urlsafe_b64encode("歌曲.mp3".encode()).decode().rstrip("=")
     headers = {"Authorization": "Bearer test-secret-1234"}
     try:
         with TestClient(main.app) as client:
             check = client.post(
                 "/api/music/track/check",
                 headers=headers,
-                json={"sha256": digest, "suffix": ".mp3", "size": len(audio)},
+                json={"sha256": digest, "suffix": ".mp3", "size": len(audio), "relative_path": relative_path},
             )
             assert check.status_code == 200
             assert check.json()["exists"] is False
@@ -372,17 +374,21 @@ def test_music_track_is_deduplicated_uploaded_and_publicly_streamed(tmp_path):
                     "Content-Length": str(len(audio)),
                     "X-Alive-Audio-Sha256": digest,
                     "X-Alive-Audio-Suffix": ".mp3",
+                    "X-Alive-Audio-Relative-Path": relative_path,
                 },
                 content=audio,
             )
             assert upload.status_code == 200
             library_path = upload.json()["library_path"]
-            assert library_path == f"{digest[:2]}/{digest}.mp3"
+            assert library_path == "歌曲.mp3"
+            uploaded_file = main._music_library_file(library_path)
+            assert uploaded_file is not None
+            assert main._music_upload_marker_digest(uploaded_file) == digest
 
             duplicate = client.post(
                 "/api/music/track/check",
                 headers=headers,
-                json={"sha256": digest, "suffix": ".mp3", "size": len(audio)},
+                json={"sha256": digest, "suffix": ".mp3", "size": len(audio), "relative_path": relative_path},
             )
             assert duplicate.json()["exists"] is True
 
