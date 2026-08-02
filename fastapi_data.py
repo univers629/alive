@@ -1455,6 +1455,27 @@ class Data:
                 session.delete(source)
             self._main(session).last_updated = time()
 
+    @property
+    def active_music_library_path(self) -> str:
+        """The private storage path of the current local-upload track, if any."""
+        with self.session() as session:
+            state = session.get(_MusicStateData, 0)
+            meta = session.get(_MusicPlayerMetaData, 0)
+            source = session.get(_MusicSourceData, 0)
+            if (
+                state is None
+                or not state.title
+                or meta is None
+                or not meta.library_path
+                or (source is not None and source.source_mode != "local-upload")
+                or (
+                    self._c.main.music_session_timeout > 0
+                    and time() - state.updated_at > self._c.main.music_session_timeout
+                )
+            ):
+                return ""
+            return meta.library_path
+
     def music_audio_path(self, token: str) -> Path | None:
         with self.session() as session:
             state = session.get(_MusicStateData, 0)

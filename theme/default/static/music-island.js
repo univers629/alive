@@ -26,6 +26,7 @@
         'windows-media-player': { glyph: 'W', label: 'Windows Media Player' },
         groove: { glyph: '♫', label: 'Groove 音乐' },
         cloudmusic: { glyph: '♬', label: '网易云音乐' },
+        saltplayer: { glyph: 'S', label: 'Salt Player for Windows' },
         spotify: { glyph: '●', label: 'Spotify' },
         foobar2000: { glyph: 'ƒ', label: 'foobar2000' }
     };

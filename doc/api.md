@@ -47,6 +47,8 @@ Cookie 不包含原始密钥，并使用 `SameSite=Strict`；HTTPS 下还会设�
 | POST | `/api/music/track/check` | 是 | 按哈希检查音频是否已保存 |
 | POST | `/api/music/track/upload` | 是 | 流式上传当前播放的音频 |
 | GET | `/api/admin/snapshot` | 会话/密钥 | 后台设备和展示设置 |
+| GET | `/api/admin/music/library` | 会话/密钥 | 列出已上传音频及总占用 |
+| POST | `/api/admin/music/library/delete` | 会话/密钥 | 删除选中的非当前音频 |
 | POST | `/api/admin/settings` | 会话/密钥 | 修改主页、弹幕和音乐目录 |
 | POST | `/api/admin/favicon` | 会话/密钥 | 上传 PNG、JPEG 或 WebP 网站图标 |
 | POST | `/api/admin/secret` | 会话/密钥 | 轮换全局密钥 |
@@ -216,6 +218,20 @@ X-Alive-Audio-Suffix: .flac
 支持 `.flac`、`.mp3`、`.m4a`、`.wav`、`.ogg` 和 `.opus`。服务端会流式写入
 临时文件，验证大小、SHA-256 和容器文件头后再原子保存；不会把整首歌同时放入
 服务器内存。默认单文件上限为 200 MiB。
+
+### 音乐库后台管理
+
+`GET /api/admin/music/library` 返回已上传音频的哈希相对路径、大小、修改时间和
+是否为当前播放文件。列表最多返回 1000 个最新文件，但总数和总占用始终完整统计。
+
+删除接口只接受音乐库内的受支持音频后缀，并且拒绝删除当前 `library_path`：
+
+```json
+{"paths": ["ab/ab...完整SHA256....flac"]}
+```
+
+切歌或调用 `POST /api/music/clear` 后，原当前文件才可在后台删除。接口不会接受
+绝对路径或跳出音乐库的相对路径。
 
 ### 网易云公开流媒体
 

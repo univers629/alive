@@ -5,6 +5,7 @@ let deviceData = {};
 let deviceOrder = [];
 let commentsData = [];
 let privateMode = false;
+let musicLibraryData = null;
 let panelLoadSequence = 0;
 let displaySettings = {
     visit_display_mode: 'total',
@@ -58,6 +59,97 @@ function setPanelLoading(loading, message = '') {
     document.body.dataset.loading = loading ? 'true' : 'false';
     document.body.setAttribute('aria-busy', String(loading));
     if (status) status.textContent = message;
+}
+
+function formatMusicBytes(value) {
+    const bytes = Math.max(0, Number(value) || 0);
+    if (bytes < 1024) return `${bytes} B`;
+    const units = ['KiB', 'MiB', 'GiB', 'TiB'];
+    let amount = bytes / 1024;
+    let index = 0;
+    while (amount >= 1024 && index < units.length - 1) {
+        amount /= 1024;
+        index += 1;
+    }
+    return `${amount.toFixed(amount >= 100 ? 0 : 1)} ${units[index]}`;
+}
+
+function formatMusicTime(value) {
+    const date = new Date((Number(value) || 0) * 1000);
+    return Number.isNaN(date.getTime()) ? '未知' : date.toLocaleString();
+}
+
+function renderMusicLibrary() {
+    const body = document.getElementById('music-library-list');
+    const summary = document.getElementById('music-library-summary');
+    if (!body || !summary) return;
+    const library = musicLibraryData;
+    if (!library) {
+        summary.textContent = '音乐库暂未加载。';
+        return;
+    }
+    summary.textContent = `共 ${library.total_files || 0} 个文件，${formatMusicBytes(library.total_bytes)}${library.truncated ? '；列表仅显示最近 1000 个' : ''}`;
+    body.replaceChildren();
+    const tracks = Array.isArray(library.tracks) ? library.tracks : [];
+    if (!tracks.length) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 5;
+        cell.className = 'empty-row';
+        cell.textContent = '音乐库暂无已上传文件。';
+        row.appendChild(cell);
+        body.appendChild(row);
+        return;
+    }
+    tracks.forEach((track) => {
+        const row = document.createElement('tr');
+        const values = [track.library_path, formatMusicBytes(track.size), formatMusicTime(track.modified_at), track.active ? '当前使用中' : '可删除'];
+        values.forEach((value) => {
+            const cell = document.createElement('td');
+            cell.textContent = String(value || '');
+            row.appendChild(cell);
+        });
+        const actions = document.createElement('td');
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'btn btn-danger';
+        remove.textContent = track.active ? '当前使用中' : '删除';
+        remove.disabled = Boolean(track.active);
+        remove.addEventListener('click', () => deleteMusicTracks([track.library_path]));
+        actions.appendChild(remove);
+        row.appendChild(actions);
+        body.appendChild(row);
+    });
+}
+
+async function refreshMusicLibrary() {
+    const summary = document.getElementById('music-library-summary');
+    if (summary) summary.textContent = '正在读取已上传音乐…';
+    try {
+        const response = await fetch('/api/admin/music/library', {
+            credentials: 'same-origin', headers: { Accept: 'application/json' }, cache: 'no-store'
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.detail || '音乐库读取失败');
+        musicLibraryData = data;
+        renderMusicLibrary();
+    } catch (error) {
+        if (summary) summary.textContent = `音乐库读取失败：${error.message || error}`;
+    }
+}
+
+async function deleteMusicTracks(paths) {
+    if (!Array.isArray(paths) || !paths.length) return;
+    if (!confirm(`确认删除 ${paths.length} 个已上传音乐文件？该操作不可恢复。`)) return;
+    try {
+        const response = await postJSON('/api/admin/music/library/delete', { paths });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.detail || '删除失败');
+        musicLibraryData = data;
+        renderMusicLibrary();
+    } catch (error) {
+        alert(`删除音乐文件失败：${error.message || error}`);
+    }
 }
 
 // 初始化页面
@@ -117,6 +209,7 @@ async function initPage() {
         if (danmakuReplayInterval) danmakuReplayInterval.value = displaySettings.danmaku_replay_interval || 30;
         const musicLibrary = document.getElementById('music-library');
         if (musicLibrary) musicLibrary.value = displaySettings.music_library || '/alive/music-library';
+        void refreshMusicLibrary();
         renderSocialLinksEditor(displaySettings.social_links || []);
         const onlineStatusDesc = document.getElementById('online-status-desc');
         if (onlineStatusDesc) onlineStatusDesc.value = displaySettings.online_status_desc || statusList[0]?.desc || '';
@@ -817,6 +910,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (refreshBtn) {
         refreshBtn.addEventListener('click', initPage)
     }
+    const refreshMusicLibraryBtn = document.getElementById('refresh-music-library-btn');
+    if (refreshMusicLibraryBtn) refreshMusicLibraryBtn.addEventListener('click', refreshMusicLibrary);
 
     // 退出登录按钮
     const logoutBtn = document.getElementById('logout-btn');

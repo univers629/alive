@@ -998,6 +998,7 @@ MUSIC_AUDIO_TYPES = {
     ".opus": "audio/ogg",
     ".wav": "audio/wav",
 }
+MUSIC_LIBRARY_LIST_LIMIT = 1000
 
 
 def _music_track_location(digest: str, suffix: str) -> tuple[str, Path]:
@@ -1011,6 +1012,60 @@ def _music_track_location(digest: str, suffix: str) -> tuple[str, Path]:
     except ValueError as exc:
         raise u.APIUnsuccessful(400, "invalid audio identity") from exc
     return relative, destination
+
+
+def _music_library_root() -> Path:
+    return Path(u.get_path(d.music_library, is_dir=True)).resolve()
+
+
+def _music_library_file(relative: str) -> Path | None:
+    if not isinstance(relative, str) or not relative or len(relative) > 4096:
+        return None
+    candidate = (_music_library_root() / relative).resolve()
+    try:
+        candidate.relative_to(_music_library_root())
+    except ValueError:
+        return None
+    if candidate.suffix.casefold() not in MUSIC_AUDIO_TYPES:
+        return None
+    return candidate
+
+
+def _music_library_snapshot() -> dict:
+    root = _music_library_root()
+    active_path = d.active_music_library_path
+    tracks = []
+    total_bytes = 0
+    total_files = 0
+    for file in root.rglob("*"):
+        if not file.is_file() or file.suffix.casefold() not in MUSIC_AUDIO_TYPES:
+            continue
+        try:
+            info = file.stat()
+            relative = file.relative_to(root).as_posix()
+        except (OSError, ValueError):
+            continue
+        total_files += 1
+        total_bytes += info.st_size
+        if len(tracks) < MUSIC_LIBRARY_LIST_LIMIT:
+            tracks.append(
+                {
+                    "library_path": relative,
+                    "size": info.st_size,
+                    "modified_at": info.st_mtime,
+                    "active": relative == active_path,
+                }
+            )
+    tracks.sort(key=lambda item: item["modified_at"], reverse=True)
+    return {
+        "success": True,
+        "music_library": str(root),
+        "active_library_path": active_path,
+        "tracks": tracks,
+        "total_files": total_files,
+        "total_bytes": total_bytes,
+        "truncated": total_files > len(tracks),
+    }
 
 
 def _valid_audio_container(path: Path, suffix: str) -> bool:
@@ -1396,6 +1451,57 @@ def admin_snapshot():
         "metrics": d.metrics_resp,
         "comments": d.comment_admin_list(),
     }
+
+
+@app.get(
+    "/api/admin/music/library",
+    dependencies=[Depends(require_secret)],
+    tags=["后台管理 / Admin"],
+    summary="列出已上传的本地音乐文件",
+)
+def admin_music_library():
+    return _music_library_snapshot()
+
+
+@app.post(
+    "/api/admin/music/library/delete",
+    dependencies=[Depends(require_secret)],
+    tags=["后台管理 / Admin"],
+    summary="删除后台选中的已上传音乐文件",
+)
+async def admin_music_library_delete(request: Request):
+    paths = (await _json_object(request)).get("paths")
+    if not isinstance(paths, list) or not paths or len(paths) > 100:
+        raise u.APIUnsuccessful(400, "paths must contain between 1 and 100 music library paths")
+    active_path = d.active_music_library_path
+    normalized = []
+    for relative in paths:
+        file = _music_library_file(relative)
+        if file is None:
+            raise u.APIUnsuccessful(400, "invalid music library path")
+        normalized.append((str(relative), file))
+    if any(relative == active_path for relative, _ in normalized):
+        raise u.APIUnsuccessful(409, "clear or switch the current music before deleting its audio file")
+    root = _music_library_root()
+    deleted = 0
+    for _, file in normalized:
+        try:
+            file.unlink()
+            deleted += 1
+        except FileNotFoundError:
+            continue
+        except OSError as error:
+            raise u.APIUnsuccessful(409, f"cannot delete music file: {error}") from error
+        parent = file.parent
+        while parent != root:
+            try:
+                parent.rmdir()
+            except OSError:
+                break
+            parent = parent.parent
+    snapshot = _music_library_snapshot()
+    snapshot["deleted"] = deleted
+    return snapshot
 
 
 @app.post(

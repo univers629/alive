@@ -54,6 +54,35 @@
 
             <div class="panel-card">
                 <div class="panel-section">
+                    <div class="panel-section-heading">
+                        <div>
+                            <h2 class="panel-section-title">音乐库管理</h2>
+                            <p class="panel-help" id="music-library-summary">正在读取已上传音乐…</p>
+                        </div>
+                        <button class="btn btn-secondary" id="refresh-music-library-btn" type="button">刷新音乐库</button>
+                    </div>
+                    <p class="panel-help">文件按内容哈希保存。当前正在一起听的文件会锁定，切歌或清空音乐状态后才能删除。</p>
+                    <div class="device-table-wrap">
+                        <table class="device-list music-library-table">
+                            <thead>
+                                <tr>
+                                    <th>文件</th>
+                                    <th>大小</th>
+                                    <th>上传时间</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="music-library-list">
+                                <tr><td colspan="5" class="empty-row">正在读取音乐库…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-section">
                     <h2 class="panel-section-title">主页展示</h2>
                     <p class="panel-help">这些设置保存在 SQLite；修改用户名不会改变设备 ID 或累计访问数据。</p>
                     <div class="settings-grid">

@@ -393,6 +393,72 @@ def test_music_track_is_deduplicated_uploaded_and_publicly_streamed(tmp_path):
         main.c.main.music_library = original_library
 
 
+def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path):
+    original_library = main.c.main.music_library
+    main.c.main.music_library = str(tmp_path / "music-library")
+    headers = {"Authorization": "Bearer test-secret-1234"}
+    first = b"ID3" + b"\x04\x00\x00\x00\x00\x00\x00" + b"alive-first"
+    second = b"ID3" + b"\x04\x00\x00\x00\x00\x00\x00" + b"alive-second"
+
+    def upload(client, content):
+        digest = hashlib.sha256(content).hexdigest()
+        response = client.post(
+            "/api/music/track/upload",
+            headers={
+                **headers,
+                "Content-Type": "audio/mpeg",
+                "X-Alive-Audio-Sha256": digest,
+                "X-Alive-Audio-Suffix": ".mp3",
+            },
+            content=content,
+        )
+        assert response.status_code == 200
+        return response.json()["library_path"]
+
+    try:
+        with TestClient(main.app) as client:
+            current_path = upload(client, first)
+            other_path = upload(client, second)
+            state = client.post(
+                "/api/music/set",
+                headers=headers,
+                json={"title": "正在播放", "library_path": current_path, "playing": True},
+            )
+            assert state.status_code == 200
+
+            listing = client.get("/api/admin/music/library", headers=headers)
+            assert listing.status_code == 200
+            tracks = {track["library_path"]: track for track in listing.json()["tracks"]}
+            assert tracks[current_path]["active"] is True
+            assert tracks[other_path]["active"] is False
+
+            protected = client.post(
+                "/api/admin/music/library/delete",
+                headers=headers,
+                json={"paths": [current_path]},
+            )
+            assert protected.status_code == 409
+
+            deleted = client.post(
+                "/api/admin/music/library/delete",
+                headers=headers,
+                json={"paths": [other_path]},
+            )
+            assert deleted.status_code == 200
+            assert deleted.json()["deleted"] == 1
+
+            assert client.post("/api/music/clear", headers=headers, json={}).status_code == 200
+            removed_current = client.post(
+                "/api/admin/music/library/delete",
+                headers=headers,
+                json={"paths": [current_path]},
+            )
+            assert removed_current.status_code == 200
+            assert removed_current.json()["total_files"] == 0
+    finally:
+        main.c.main.music_library = original_library
+
+
 def test_home_includes_new_music_island_without_legacy_playlist_api():
     with TestClient(main.app) as client:
         home = client.get("/")
@@ -491,6 +557,7 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert "bottom: calc(24px + env(safe-area-inset-bottom));" in music_css
         assert "left: 50%;" not in music_css
         music_js = client.get("/static/music-island.js").text
+        assert "saltplayer: { glyph: 'S', label: 'Salt Player for Windows' }" in music_js
         assert "elements.join.disabled = !state?.audio_url && !joined;" in music_js
         assert "已开启一起听，等待下一首可用音源" in music_js
         assert "if (!state.audio_url) leaveTogether();" not in music_js
@@ -976,6 +1043,7 @@ def test_admin_uses_signed_session_and_post_actions():
         assert "ALIVE CONTROL CENTER" in panel.text
         assert 'data-loading="true" aria-busy="true"' in panel.text
         assert 'id="panel-loading-status"' in panel.text
+        assert 'id="music-library-list"' in panel.text
         assert 'class="device-table-wrap"' in panel.text
         assert 'id="music-account-status"' not in panel.text
         assert 'id="music-credential-value"' not in panel.text
@@ -989,6 +1057,7 @@ def test_admin_uses_signed_session_and_post_actions():
         assert "scrollbar-color:" in panel_css
         assert 'body.admin-panel[data-loading="true"] .panel-card' in panel_css
         panel_js = client.get("/static/panel.js").text
+        assert "/api/admin/music/library" in panel_js
         assert "const [statusResponse, queryResponse] = await Promise.all([" in panel_js
         assert "window.onload = initPage" not in panel_js
         assert "void initPage();" in panel_js
