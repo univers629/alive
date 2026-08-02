@@ -48,7 +48,7 @@
         {% if social_links %}
         <nav class="profile-social-links" aria-label="个人链接">
             {% for social in social_links %}
-            <a class="profile-social-link" href="{{ social.url }}" target="_blank" rel="me noopener noreferrer" aria-label="打开 {{ social.label }}">
+            <a class="profile-social-link profile-social-link--{{ social.platform }}" href="{{ social.url }}" target="_blank" rel="me noopener noreferrer" aria-label="打开 {{ social.label }}">
                 {% if social.icon.startswith('http') %}
                 <img src="{{ social.icon }}" alt="" aria-hidden="true" width="17" height="17" loading="lazy" decoding="async">
                 {% else %}

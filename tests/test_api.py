@@ -525,7 +525,8 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert 'href="https://github.com/Alive-Project"' in footer
         assert "img/alive-project-icon-16.webp" in footer
         assert 'loading="lazy" decoding="async"' in footer
-        assert "cdn.simpleicons.org" not in footer
+        assert "https://cdn.simpleicons.org/python/3776AB" in footer
+        assert "https://cdn.simpleicons.org/fastapi/009688" in footer
         project_icon = Path(main.u.get_path("theme/default/static/img/alive-project-icon-16.webp"))
         with Image.open(project_icon) as image:
             assert image.format == "WEBP"

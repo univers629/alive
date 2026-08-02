@@ -142,7 +142,13 @@
   object-fit: contain;
 }
 
-:root[data-color-mode="dark"] .profile-social-link img {
+:root[data-color-mode="dark"] .profile-social-link--website img,
+:root[data-color-mode="dark"] .profile-social-link--github img,
+:root[data-color-mode="dark"] .profile-social-link--douyin img,
+:root[data-color-mode="dark"] .profile-social-link--x img,
+:root[data-color-mode="dark"] .profile-social-link--linkedin img,
+:root[data-color-mode="dark"] .profile-social-link--steam img,
+:root[data-color-mode="dark"] .profile-social-link--email img {
   filter: invert(1) brightness(1.45);
 }
 
