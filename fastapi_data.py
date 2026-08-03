@@ -399,6 +399,37 @@ class Data:
             self._main(session).last_updated = value
 
     @staticmethod
+    def _normalize_reported_device_fields(fields: dict[str, Any]) -> dict[str, Any]:
+        """Canonicalize client model and activity categories without breaking legacy reports."""
+        normalized = dict(fields)
+        raw_model = str(normalized.get("device_type") or "").strip().casefold()
+        model_aliases = {
+            "mobile": "phone",
+            "computer": "desktop",
+            "pc": "desktop",
+        }
+        model = model_aliases.get(raw_model, raw_model)
+        supported_models = {"desktop", "laptop", "phone", "tablet", "watch", "server", "game", "other"}
+        if model in supported_models:
+            normalized["device_type"] = model
+
+        if normalized.get("activity_reporting") is True:
+            raw_activity_type = str(normalized.get("activity_device_type") or model or "desktop").strip().casefold()
+            normalized["activity_device_type"] = (
+                "mobile" if raw_activity_type in {"mobile", "phone", "tablet", "watch"} else "desktop"
+            )
+        return normalized
+
+    @staticmethod
+    def _default_device_icon(fields: dict[str, Any]) -> str:
+        model = str(fields.get("device_type") or "").strip().casefold()
+        if model in {"mobile", "phone"}:
+            return "phone"
+        if model in {"desktop", "laptop", "tablet", "watch", "server", "game", "other"}:
+            return model
+        return "desktop"
+
+    @staticmethod
     def _serialize_device(
         device: _DeviceStatusData,
         profile: _DeviceProfileData | None = None,
@@ -432,7 +463,7 @@ class Data:
         }
         result["profile"] = {
             "display_name": profile.display_name if profile else "",
-            "icon_key": profile.icon_key if profile else "desktop",
+            "icon_key": profile.icon_key if profile else Data._default_device_icon(fields),
             "sort_order": profile.sort_order if profile else 0,
             "public": profile.is_public if profile else True,
         }
@@ -588,7 +619,7 @@ class Data:
                     profile = _DeviceProfileData(
                         id=device.id,
                         display_name="",
-                        icon_key="desktop",
+                        icon_key=self._default_device_icon(device.fields or {}),
                         sort_order=0,
                         is_public=True,
                     )
@@ -638,6 +669,7 @@ class Data:
     ) -> None:
         if not id:
             raise u.APIUnsuccessful(400, "device id cannot be empty!")
+        normalized_fields = self._normalize_reported_device_fields(fields or {})
         with self._write_lock, self.session() as session:
             device = session.get(_DeviceStatusData, id)
             if device is None:
@@ -648,7 +680,7 @@ class Data:
                     show_name=show_name,
                     using=using,
                     status=status,
-                    fields=fields or {},
+                    fields=normalized_fields,
                     last_updated=time(),
                 )
                 session.add(device)
@@ -659,10 +691,10 @@ class Data:
                     device.using = using
                 if status is not None:
                     device.status = status
-                if fields:
-                    device.fields = u.deep_merge_dict(device.fields or {}, fields)
+                if normalized_fields:
+                    device.fields = u.deep_merge_dict(device.fields or {}, normalized_fields)
                 device.last_updated = time()
-            self._record_app_activity(session, id, bool(using), fields or {})
+            self._record_app_activity(session, id, bool(using), normalized_fields)
             self._prune_activity_history_in_session(session)
             self._main(session).last_updated = time()
 
@@ -710,7 +742,9 @@ class Data:
         app_key = str(fields.get("activity_app_id") or "").strip()[:240]
         app_name = str(fields.get("activity_app_name") or "").strip()[:240]
         app_icon_url = str(fields.get("activity_app_icon_url") or fields.get("app_icon_url") or "").strip()[:LIMIT]
-        device_type = str(fields.get("activity_device_type") or "desktop").strip().lower()[:24]
+        device_type = self._activity_category(
+            str(fields.get("activity_device_type") or fields.get("device_type") or "desktop").strip().lower()
+        )
         reported_event = str(fields.get("activity_event") or "").strip().lower()[:32]
 
         if not using or not app_key:

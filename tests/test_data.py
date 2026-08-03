@@ -76,6 +76,62 @@ def test_stale_device_is_marked_not_using(tmp_path):
         data.close()
 
 
+def test_reported_device_model_controls_default_icon_and_activity_category(tmp_path):
+    database = tmp_path / "alive.db"
+    config = ConfigModel()
+    config.main.database = f"sqlite:///{database.as_posix()}"
+
+    data = Data(config, start_scheduler=False)
+    try:
+        data.device_set(
+            id="alive-client",
+            show_name="Alive Client",
+            using=True,
+            status="Browser",
+            fields={
+                "device_type": "phone",
+                "activity_reporting": True,
+                "activity_app_id": "com.example.browser",
+                "activity_app_name": "Browser",
+            },
+        )
+        phone = data.device_list["alive-client"]
+        assert phone["profile"]["icon_key"] == "phone"
+        assert phone["fields"]["activity_device_type"] == "mobile"
+        assert data.activity_snapshot()["categories"]["mobile"]["total_records"] == 1
+        assert data.activity_snapshot()["categories"]["desktop"]["total_records"] == 0
+
+        data.device_set(
+            id="alive-client",
+            show_name="Alive Client",
+            using=True,
+            status="Browser",
+            fields={"device_type": "tablet", "activity_reporting": True},
+        )
+        tablet = data.device_list["alive-client"]
+        assert tablet["profile"]["icon_key"] == "tablet"
+        assert tablet["fields"]["activity_device_type"] == "mobile"
+
+        data.device_set(
+            id="alive-desktop",
+            show_name="Alive Desktop",
+            using=True,
+            status="Editor",
+            fields={
+                "device_type": "desktop",
+                "activity_reporting": True,
+                "activity_app_id": "editor",
+                "activity_app_name": "Editor",
+            },
+        )
+        desktop = data.device_list["alive-desktop"]
+        assert desktop["profile"]["icon_key"] == "desktop"
+        assert desktop["fields"]["activity_device_type"] == "desktop"
+        assert data.activity_snapshot()["categories"]["desktop"]["total_records"] == 1
+    finally:
+        data.close()
+
+
 def test_music_state_survives_database_reopen_and_respects_privacy(tmp_path):
     database = tmp_path / "alive.db"
     music_library = tmp_path / "music"
