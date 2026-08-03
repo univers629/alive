@@ -609,7 +609,7 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert "elements.join.disabled = !state?.audio_url && !joined;" in music_js
         assert "已开启一起听，等待下一首可用音源" in music_js
         assert "if (!state.audio_url) leaveTogether();" not in music_js
-        assert "当前音源不可用，将在切歌后自动重试" in music_js
+        assert "当前音源无法播放，请等待压缩缓存或切歌后重试" in music_js
 
         chrome_css = client.get("/static/site-chrome.css").text
         assert ".site-topbar__admin {\n  height: 28px;" in chrome_css

@@ -174,6 +174,16 @@
         }
     }
 
+    function playFailureMessage(error) {
+        if (error?.name === 'NotAllowedError') {
+            return '浏览器禁止自动播放，请在站点权限中允许音频后重试';
+        }
+        if (error?.name === 'NotSupportedError') {
+            return '当前音频格式尚不可播放，请等待服务器压缩缓存生成';
+        }
+        return '当前音源无法播放，请在切歌后重试';
+    }
+
     function loadAudio(url) {
         const nextUrl = String(url || '');
         if (nextUrl === loadedAudioUrl) return;
@@ -278,19 +288,19 @@
             playBlocked = false;
             updateJoinButton();
         }).catch((error) => {
-            console.warn('[MusicIsland] 浏览器暂未允许播放音频', error);
+            console.warn('[MusicIsland] 无法开始一起听', error);
             joined = false;
             playBlocked = true;
             root.classList.remove('is-listening');
             elements.audio.pause();
-            updateJoinButton('浏览器阻止播放，请再次点击“一起听”');
+            updateJoinButton(playFailureMessage(error));
         });
     });
 
     elements.audio.addEventListener('error', () => {
         elements.audio.pause();
         elements.audio.playbackRate = 1;
-        updateJoinButton('当前音源不可用，将在切歌后自动重试');
+        updateJoinButton('当前音源无法播放，请等待压缩缓存或切歌后重试');
     });
 
     elements.audio.addEventListener('waiting', () => {
