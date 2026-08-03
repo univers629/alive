@@ -1341,7 +1341,7 @@ def _store_embedded_music_cover(content: bytes) -> str:
     if not content or len(content) > MUSIC_EMBEDDED_COVER_MAX_BYTES:
         return ""
     try:
-        with Image.open(BytesIO(content)) as image:
+        with Image.open(io.BytesIO(content)) as image:
             image.verify()
             suffix = {
                 "JPEG": ".jpg",

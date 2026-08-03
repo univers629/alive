@@ -439,6 +439,26 @@ def test_word_timestamped_embedded_lrc_becomes_line_lyrics():
     ]
 
 
+def test_embedded_music_cover_is_validated_and_stored(tmp_path, monkeypatch):
+    cover_directory = tmp_path / "music-covers"
+    original_get_path = main.u.get_path
+
+    def test_get_path(path, is_dir=False):
+        if path == "data/public/music-covers":
+            cover_directory.mkdir(parents=True, exist_ok=True)
+            return str(cover_directory)
+        return original_get_path(path, is_dir=is_dir)
+
+    stream = io.BytesIO()
+    Image.new("RGB", (8, 8), "blue").save(stream, format="JPEG")
+    monkeypatch.setattr(main.u, "get_path", test_get_path)
+
+    cover_url = main._store_embedded_music_cover(stream.getvalue())
+
+    assert cover_url.startswith("/music-covers/")
+    assert (cover_directory / cover_url.rsplit("/", 1)[-1]).is_file()
+
+
 def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path):
     original_library = main.c.main.music_library
     main.c.main.music_library = str(tmp_path / "music-library")
