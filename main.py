@@ -48,7 +48,7 @@ from models import (
     CommentCreateModel,
     HealthStateUpdateModel,
     MusicStateUpdateModel,
-    MusicTrackCheckModel,
+    MusicTrackLookupModel,
 )
 from music_sources import NeteaseResolver
 import utils as u
@@ -1041,52 +1041,17 @@ def _decode_music_relative_path(encoded: str, suffix: str) -> str:
     return relative if len(relative) <= 2048 else ""
 
 
-def _music_upload_marker(destination: Path) -> Path:
-    return destination.with_name(f".{destination.name}.alive-upload.json")
-
-
-def _music_upload_marker_digest(destination: Path) -> str:
-    try:
-        payload = json.loads(_music_upload_marker(destination).read_text(encoding="utf-8"))
-        digest = str(payload.get("sha256", "")).casefold()
-        return digest if len(digest) == 64 else ""
-    except (OSError, ValueError, TypeError):
-        return ""
-
-
-def _write_music_upload_marker(destination: Path, digest: str) -> None:
-    marker = _music_upload_marker(destination)
-    temporary = marker.with_name(f".{marker.name}.{secrets.token_hex(8)}.part")
-    try:
-        temporary.write_text(json.dumps({"sha256": digest}), encoding="utf-8")
-        temporary.replace(marker)
-    finally:
-        temporary.unlink(missing_ok=True)
-
-
-def _music_track_location(digest: str, suffix: str, encoded_relative: str = "") -> tuple[str, Path]:
-    safe_digest = digest.casefold()
+def _music_track_location(suffix: str, encoded_relative: str) -> tuple[str, Path]:
     safe_suffix = suffix.casefold()
     relative = _decode_music_relative_path(encoded_relative, safe_suffix)
-    root = _music_library_root()
     if not relative:
-        # Compatible fallback for older reporters which did not send a source path.
-        relative = f"{safe_digest[:2]}/{safe_digest}{safe_suffix}"
+        raise u.APIUnsuccessful(400, "invalid music filename")
+    root = _music_library_root()
     destination = (root / relative).resolve()
     try:
         destination.relative_to(root)
     except ValueError as exc:
         raise u.APIUnsuccessful(400, "invalid audio identity") from exc
-    if encoded_relative and destination.exists() and _music_upload_marker_digest(destination) != safe_digest:
-        original = destination
-        for number in range(0, 1000):
-            suffix_text = f" ({safe_digest[:8]})" if number == 0 else f" ({safe_digest[:8]}-{number + 1})"
-            destination = original.with_name(f"{original.stem}{suffix_text}{safe_suffix}")
-            if not destination.exists() or _music_upload_marker_digest(destination) == safe_digest:
-                relative = destination.relative_to(root).as_posix()
-                break
-        else:
-            raise u.APIUnsuccessful(409, "too many music files share the same name")
     return relative, destination
 
 
@@ -1330,25 +1295,21 @@ def _valid_audio_container(path: Path, suffix: str) -> bool:
 
 
 @app.post(
-    "/api/music/track/check",
+    "/api/music/track/lookup",
     dependencies=[Depends(require_secret)],
     tags=["数据修改 / Mutations"],
-    summary="检查音频是否已经按内容保存",
+    summary="按安全文件名查找已在音乐库中的音频",
 )
-def music_track_check(payload: MusicTrackCheckModel):
-    maximum = c.main.music_upload_max_mb * 1024 * 1024
-    if payload.size > maximum:
-        raise u.APIUnsuccessful(
-            413,
-            f"audio exceeds the configured {c.main.music_upload_max_mb} MiB limit",
-        )
-    relative, destination = _music_track_location(payload.sha256, payload.suffix, payload.relative_path)
-    exists = destination.is_file() and destination.stat().st_size == payload.size
+def music_track_lookup(payload: MusicTrackLookupModel):
+    relative = _decode_music_relative_path(payload.relative_path, payload.suffix)
+    if not relative:
+        raise u.APIUnsuccessful(400, "invalid music filename")
+    file = _music_library_file(relative)
+    exists = file is not None and file.is_file()
     return {
         "success": True,
         "exists": exists,
         "library_path": relative,
-        "max_bytes": maximum,
     }
 
 
@@ -1359,11 +1320,8 @@ def music_track_check(payload: MusicTrackCheckModel):
     summary="流式上传一首当前播放的音频",
 )
 async def music_track_upload(request: Request):
-    digest = request.headers.get("X-Alive-Audio-Sha256", "").casefold()
     suffix = request.headers.get("X-Alive-Audio-Suffix", "").casefold()
     relative_path = request.headers.get("X-Alive-Audio-Relative-Path", "")
-    if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
-        raise u.APIUnsuccessful(400, "X-Alive-Audio-Sha256 must be 64 hexadecimal characters")
     if suffix not in MUSIC_AUDIO_TYPES:
         raise u.APIUnsuccessful(415, "X-Alive-Audio-Suffix is not supported")
     try:
@@ -1380,8 +1338,8 @@ async def music_track_upload(request: Request):
             f"audio exceeds the configured {c.main.music_upload_max_mb} MiB limit",
         )
 
-    relative, destination = _music_track_location(digest, suffix, relative_path)
-    if destination.is_file() and destination.stat().st_size == advertised_size:
+    relative, destination = _music_track_location(suffix, relative_path)
+    if destination.is_file():
         _schedule_music_stream_transcode(destination)
         return {
             "success": True,
@@ -1395,7 +1353,6 @@ async def music_track_upload(request: Request):
         f".{destination.name}.{secrets.token_hex(8)}.part"
     )
     received = 0
-    hasher = hashlib.sha256()
     try:
         with temporary.open("xb") as file:
             async for chunk in request.stream():
@@ -1407,16 +1364,12 @@ async def music_track_upload(request: Request):
                         413,
                         f"audio exceeds the configured {c.main.music_upload_max_mb} MiB limit",
                     )
-                hasher.update(chunk)
                 file.write(chunk)
         if received != advertised_size:
             raise u.APIUnsuccessful(400, "uploaded audio size does not match Content-Length")
-        if not hmac.compare_digest(hasher.hexdigest(), digest):
-            raise u.APIUnsuccessful(400, "uploaded audio sha256 does not match")
         if not _valid_audio_container(temporary, suffix):
             raise u.APIUnsuccessful(415, "uploaded bytes do not match the audio suffix")
         temporary.replace(destination)
-        _write_music_upload_marker(destination, digest)
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -1743,7 +1696,6 @@ async def admin_music_library_delete(request: Request):
         cache = _music_stream_cache_file(file)
         if cache is not None:
             cache.unlink(missing_ok=True)
-        _music_upload_marker(file).unlink(missing_ok=True)
         parent = file.parent
         while parent != root:
             try:
@@ -2173,7 +2125,7 @@ POST_ONLY_PATHS = {
     "/api/music/cover",
     "/api/music/player-icon",
     "/api/device/app-icon",
-    "/api/music/track/check",
+    "/api/music/track/lookup",
     "/api/music/track/upload",
     "/api/comments/create",
     "/api/admin/settings",

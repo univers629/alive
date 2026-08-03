@@ -76,7 +76,7 @@ def test_post_only_mutations_and_public_reads():
         assert client.get("/api/music/cover").status_code == 405
         assert client.get("/api/music/player-icon").status_code == 405
         assert client.get("/api/device/app-icon").status_code == 405
-        assert client.get("/api/music/track/check").status_code == 405
+        assert client.get("/api/music/track/lookup").status_code == 405
         assert client.get("/api/music/track/upload").status_code == 405
         assert client.get("/api/admin/music/account/save").status_code == 404
         assert client.get("/api/admin/music/account/test").status_code == 404
@@ -353,15 +353,14 @@ def test_music_track_is_deduplicated_uploaded_and_publicly_streamed(tmp_path):
     original_library = main.c.main.music_library
     main.c.main.music_library = str(tmp_path / "music-library")
     audio = b"ID3" + b"\x04\x00\x00\x00\x00\x00\x00" + b"alive-audio-test"
-    digest = hashlib.sha256(audio).hexdigest()
     relative_path = base64.urlsafe_b64encode("歌曲.mp3".encode()).decode().rstrip("=")
     headers = {"Authorization": "Bearer test-secret-1234"}
     try:
         with TestClient(main.app) as client:
             check = client.post(
-                "/api/music/track/check",
+                "/api/music/track/lookup",
                 headers=headers,
-                json={"sha256": digest, "suffix": ".mp3", "size": len(audio), "relative_path": relative_path},
+                json={"suffix": ".mp3", "relative_path": relative_path},
             )
             assert check.status_code == 200
             assert check.json()["exists"] is False
@@ -372,7 +371,6 @@ def test_music_track_is_deduplicated_uploaded_and_publicly_streamed(tmp_path):
                     **headers,
                     "Content-Type": "audio/mpeg",
                     "Content-Length": str(len(audio)),
-                    "X-Alive-Audio-Sha256": digest,
                     "X-Alive-Audio-Suffix": ".mp3",
                     "X-Alive-Audio-Relative-Path": relative_path,
                 },
@@ -383,12 +381,11 @@ def test_music_track_is_deduplicated_uploaded_and_publicly_streamed(tmp_path):
             assert library_path == "歌曲.mp3"
             uploaded_file = main._music_library_file(library_path)
             assert uploaded_file is not None
-            assert main._music_upload_marker_digest(uploaded_file) == digest
 
             duplicate = client.post(
-                "/api/music/track/check",
+                "/api/music/track/lookup",
                 headers=headers,
-                json={"sha256": digest, "suffix": ".mp3", "size": len(audio), "relative_path": relative_path},
+                json={"suffix": ".mp3", "relative_path": relative_path},
             )
             assert duplicate.json()["exists"] is True
 
@@ -420,15 +417,15 @@ def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path)
     first = b"ID3" + b"\x04\x00\x00\x00\x00\x00\x00" + b"alive-first"
     second = b"ID3" + b"\x04\x00\x00\x00\x00\x00\x00" + b"alive-second"
 
-    def upload(client, content):
-        digest = hashlib.sha256(content).hexdigest()
+    def upload(client, content, name):
+        relative_path = base64.urlsafe_b64encode(name.encode()).decode().rstrip("=")
         response = client.post(
             "/api/music/track/upload",
             headers={
                 **headers,
                 "Content-Type": "audio/mpeg",
-                "X-Alive-Audio-Sha256": digest,
                 "X-Alive-Audio-Suffix": ".mp3",
+                "X-Alive-Audio-Relative-Path": relative_path,
             },
             content=content,
         )
@@ -437,8 +434,8 @@ def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path)
 
     try:
         with TestClient(main.app) as client:
-            current_path = upload(client, first)
-            other_path = upload(client, second)
+            current_path = upload(client, first, "first.mp3")
+            other_path = upload(client, second, "second.mp3")
             other_file = main._music_library_file(other_path)
             assert other_file is not None
             other_cache = main._music_stream_cache_file(other_file)

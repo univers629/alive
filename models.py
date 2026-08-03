@@ -74,13 +74,11 @@ class MusicStateUpdateModel(BaseModel):
     client_updated_at: float = Field(default=0, ge=0, le=4102444800)
 
 
-class MusicTrackCheckModel(BaseModel):
-    """Content identity used before a trusted client uploads one audio file."""
+class MusicTrackLookupModel(BaseModel):
+    """A trusted reporter's fast lookup for an existing library filename."""
 
-    sha256: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
     suffix: Literal[".flac", ".mp3", ".m4a", ".wav", ".ogg", ".opus"]
-    size: int = Field(gt=0)
-    relative_path: str = Field(default="", max_length=4096)
+    relative_path: str = Field(min_length=1, max_length=4096)
 
 
 class HealthStateUpdateModel(BaseModel):

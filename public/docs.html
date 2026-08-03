@@ -154,7 +154,7 @@
                     <tr><td class="method post">POST</td><td><code>/api/device/private</code></td><td><code>{"private": true}</code></td></tr>
                     <tr><td class="method post">POST</td><td><code>/api/health/set</code></td><td>更新心率和今日步数</td></tr>
                     <tr><td class="method post">POST</td><td><code>/api/music/set</code></td><td>更新当前播放状态</td></tr>
-                    <tr><td class="method post">POST</td><td><code>/api/music/track/check</code></td><td>按 SHA-256 检查是否已上传</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/music/track/lookup</code></td><td>按文件名检查是否已上传</td></tr>
                     <tr><td class="method post">POST</td><td><code>/api/music/track/upload</code></td><td>流式上传当前歌曲二进制</td></tr>
                 </tbody>
             </table>
@@ -244,7 +244,7 @@ Invoke-RestMethod `
                     <tr><td class="method post">POST</td><td><code>/api/device/private</code></td><td><code>{"private": true}</code></td></tr>
                     <tr><td class="method post">POST</td><td><code>/api/health/set</code></td><td>Update heart rate and steps</td></tr>
                     <tr><td class="method post">POST</td><td><code>/api/music/set</code></td><td>Update now-playing state</td></tr>
-                    <tr><td class="method post">POST</td><td><code>/api/music/track/check</code></td><td>Check by SHA-256 before upload</td></tr>
+                    <tr><td class="method post">POST</td><td><code>/api/music/track/lookup</code></td><td>Check an existing track by filename</td></tr>
                     <tr><td class="method post">POST</td><td><code>/api/music/track/upload</code></td><td>Stream the current audio file</td></tr>
                 </tbody>
             </table>
