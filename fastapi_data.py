@@ -141,6 +141,9 @@ class _MusicLibraryTrackData(Base):
     title: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     artist: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     album: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    cover_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    lyrics: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    metadata_scanned_at: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     updated_at: Mapped[float] = mapped_column(Float, nullable=False, default=time)
 
 
@@ -292,6 +295,15 @@ class Data:
             music_state_columns = {column["name"] for column in inspect(self.engine).get_columns("music_state")}
             if "client_updated_at" not in music_state_columns:
                 connection.execute(text("ALTER TABLE music_state ADD COLUMN client_updated_at FLOAT NOT NULL DEFAULT 0"))
+            library_columns = {column["name"] for column in inspect(self.engine).get_columns("music_library_tracks")}
+            missing_library = {
+                "cover_url": "ALTER TABLE music_library_tracks ADD COLUMN cover_url TEXT NOT NULL DEFAULT ''",
+                "lyrics": "ALTER TABLE music_library_tracks ADD COLUMN lyrics JSON NOT NULL DEFAULT '[]'",
+                "metadata_scanned_at": "ALTER TABLE music_library_tracks ADD COLUMN metadata_scanned_at FLOAT NOT NULL DEFAULT 0",
+            }
+            for name, statement in missing_library.items():
+                if name not in library_columns:
+                    connection.execute(text(statement))
             activity_columns = {column["name"] for column in inspect(self.engine).get_columns("app_activities")}
             if "device_type" not in activity_columns:
                 connection.execute(text("ALTER TABLE app_activities ADD COLUMN device_type VARCHAR(24) NOT NULL DEFAULT 'desktop'"))
@@ -1438,6 +1450,12 @@ class Data:
         lyrics = sorted(payload.get("lyrics") or [], key=lambda line: line.get("time", 0))
         duration = float(payload.get("duration") or 0)
         position = float(payload.get("position") or 0)
+        source_mode = payload.get("source_mode") or "metadata-only"
+        library_path = payload.get("library_path", "")
+        if source_mode == "metadata-only" and library_path:
+            source_mode = "local-upload"
+        elif source_mode == "metadata-only" and payload.get("audio_url"):
+            source_mode = "external-url"
         if duration > 0:
             position = min(position, duration)
 
@@ -1462,36 +1480,49 @@ class Data:
             if source is None:
                 source = _MusicSourceData(id=0)
                 session.add(source)
-            source_mode = payload.get("source_mode") or "metadata-only"
-            if source_mode == "metadata-only" and payload.get("library_path"):
-                source_mode = "local-upload"
-            elif source_mode == "metadata-only" and payload.get("audio_url"):
-                source_mode = "external-url"
+            track = None
+            if library_path:
+                track = session.get(_MusicLibraryTrackData, library_path)
+                if track is None:
+                    track = _MusicLibraryTrackData(library_path=library_path)
+                    session.add(track)
+            use_server_tags = (
+                source_mode == "local-upload"
+                and track is not None
+                and (track.metadata_scanned_at or 0) > 0
+            )
             state.device_id = payload.get("device_id", "")
-            state.title = payload.get("title", "")
-            state.artist = payload.get("artist", "")
-            state.album = payload.get("album", "")
-            state.cover_url = payload.get("cover_url", "")
+            state.title = (track.title if use_server_tags and track.title else payload.get("title", ""))
+            state.artist = (track.artist if use_server_tags and track.artist else payload.get("artist", ""))
+            state.album = (track.album if use_server_tags and track.album else payload.get("album", ""))
+            state.cover_url = (
+                track.cover_url
+                if use_server_tags and track.cover_url
+                else payload.get("cover_url", "")
+            )
             state.audio_url = payload.get("audio_url", "")
             state.source_url = payload.get("source_url", "")
             state.duration = duration
             state.position = position
             state.playing = bool(payload.get("playing"))
-            state.lyrics = lyrics
+            state.lyrics = track.lyrics if use_server_tags and track.lyrics else lyrics
             state.client_updated_at = client_updated_at
             state.updated_at = now
             meta.player_name = payload.get("player_name", "")
             meta.player_icon = payload.get("player_icon", "media-player")
             meta.player_icon_url = payload.get("player_icon_url", "")
-            meta.library_path = payload.get("library_path", "")
-            if meta.library_path:
-                track = session.get(_MusicLibraryTrackData, meta.library_path)
-                if track is None:
-                    track = _MusicLibraryTrackData(library_path=meta.library_path)
-                    session.add(track)
-                track.title = state.title
-                track.artist = state.artist
-                track.album = state.album
+            meta.library_path = library_path
+            if track is not None:
+                if not track.title:
+                    track.title = state.title
+                if not track.artist:
+                    track.artist = state.artist
+                if not track.album:
+                    track.album = state.album
+                if not track.cover_url:
+                    track.cover_url = state.cover_url
+                if not track.lyrics:
+                    track.lyrics = state.lyrics
                 track.updated_at = now
             source.source_mode = source_mode
             source.source_id = payload.get("source_id", "")
@@ -1567,6 +1598,32 @@ class Data:
                 }
                 for row in rows
             }
+
+    def music_library_metadata_scanned(self, path: str) -> bool:
+        """Return whether the server has already inspected the file's embedded tags."""
+        with self.session() as session:
+            row = session.get(_MusicLibraryTrackData, path)
+            return bool(row is not None and row.metadata_scanned_at > 0)
+
+    def save_music_library_file_metadata(self, path: str, metadata: dict[str, Any]) -> None:
+        """Persist metadata extracted by the server from a private library file."""
+        now = time()
+        lyrics = sorted(
+            (metadata.get("lyrics") or [])[:5000],
+            key=lambda line: line.get("time", 0),
+        )
+        with self._write_lock, self.session() as session:
+            row = session.get(_MusicLibraryTrackData, path)
+            if row is None:
+                row = _MusicLibraryTrackData(library_path=path)
+                session.add(row)
+            row.title = str(metadata.get("title") or row.title or "")[:300]
+            row.artist = str(metadata.get("artist") or row.artist or "")[:300]
+            row.album = str(metadata.get("album") or row.album or "")[:300]
+            row.cover_url = str(metadata.get("cover_url") or row.cover_url or "")[:4096]
+            row.lyrics = lyrics or row.lyrics or []
+            row.metadata_scanned_at = now
+            row.updated_at = now
 
     def search_music_library_metadata(self, query: str, limit: int = 1000) -> dict[str, dict[str, Any]]:
         """Search the persisted song index without reading audio files or tags."""

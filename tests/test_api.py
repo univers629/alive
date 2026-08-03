@@ -349,12 +349,23 @@ def test_music_account_credential_routes_are_removed():
         assert "/api/admin/music/account/remove" not in openapi_paths
 
 
-def test_music_track_is_deduplicated_uploaded_and_publicly_streamed(tmp_path):
+def test_music_track_is_deduplicated_uploaded_and_publicly_streamed(tmp_path, monkeypatch):
     original_library = main.c.main.music_library
     main.c.main.music_library = str(tmp_path / "music-library")
     audio = b"ID3" + b"\x04\x00\x00\x00\x00\x00\x00" + b"alive-audio-test"
     relative_path = base64.urlsafe_b64encode("歌曲.mp3".encode()).decode().rstrip("=")
     headers = {"Authorization": "Bearer test-secret-1234"}
+    monkeypatch.setattr(
+        main,
+        "_read_music_file_metadata",
+        lambda _file: {
+            "title": "标签歌名",
+            "artist": "标签歌手",
+            "album": "标签专辑",
+            "cover_url": "/music-covers/embedded.jpg",
+            "lyrics": [{"time": 1.5, "text": "标签歌词", "translation": ""}],
+        },
+    )
     try:
         with TestClient(main.app) as client:
             check = client.post(
@@ -401,6 +412,12 @@ def test_music_track_is_deduplicated_uploaded_and_publicly_streamed(tmp_path):
                     "playing": True,
                 },
             )
+            music = state.json()["music"]
+            assert music["title"] == "标签歌名"
+            assert music["artist"] == "标签歌手"
+            assert music["album"] == "标签专辑"
+            assert music["cover_url"] == "/music-covers/embedded.jpg"
+            assert music["lyrics"][0]["text"] == "标签歌词"
             audio_url = state.json()["music"]["audio_url"]
             streamed = client.get(audio_url)
             assert streamed.status_code == 200
@@ -408,6 +425,18 @@ def test_music_track_is_deduplicated_uploaded_and_publicly_streamed(tmp_path):
             assert client.post("/api/music/clear", headers=headers, json={}).status_code == 200
     finally:
         main.c.main.music_library = original_library
+
+
+def test_word_timestamped_embedded_lrc_becomes_line_lyrics():
+    lyrics = main._parse_embedded_lrc(
+        "[offset:100]\n"
+        "[00:01.00]稻[00:01.50]香[00:02.00] - [00:02.50]周[00:03.00]杰伦\n"
+        "[00:04.25]下一句"
+    )
+    assert lyrics == [
+        {"time": 1.1, "text": "稻香 - 周杰伦", "translation": ""},
+        {"time": 4.35, "text": "下一句", "translation": ""},
+    ]
 
 
 def test_admin_music_library_lists_and_never_deletes_the_current_track(tmp_path):

@@ -211,6 +211,39 @@ def test_netease_stream_never_uses_alive_local_audio(tmp_path):
         data.close()
 
 
+def test_server_scanned_music_tags_override_empty_client_metadata(tmp_path):
+    config = ConfigModel()
+    config.main.database = "sqlite:///:memory:"
+    data = Data(config, start_scheduler=False)
+    path = "artist-song.flac"
+    try:
+        data.save_music_library_file_metadata(
+            path,
+            {
+                "title": "文件标签歌名",
+                "artist": "文件标签歌手",
+                "album": "文件标签专辑",
+                "cover_url": "/music-covers/file.jpg",
+                "lyrics": [{"time": 2, "text": "文件标签歌词", "translation": ""}],
+            },
+        )
+        state = data.music_set(
+            {
+                "source_mode": "local-upload",
+                "library_path": path,
+                "title": "媒体会话歌名",
+                "playing": True,
+            }
+        )
+        assert state["title"] == "文件标签歌名"
+        assert state["artist"] == "文件标签歌手"
+        assert state["album"] == "文件标签专辑"
+        assert state["cover_url"] == "/music-covers/file.jpg"
+        assert state["lyrics"][0]["text"] == "文件标签歌词"
+    finally:
+        data.close()
+
+
 def test_playing_music_stores_reported_position_without_correction(tmp_path):
     config = ConfigModel()
     config.main.database = "sqlite:///:memory:"
@@ -347,6 +380,47 @@ def test_music_player_icon_url_migrates_on_old_database(tmp_path):
             }
         )
         assert stored["player_icon_url"] == "/music-player-icons/def.png"
+    finally:
+        data.close()
+
+
+def test_music_library_embedded_metadata_columns_migrate_on_old_database(tmp_path):
+    database = tmp_path / "alive.db"
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "CREATE TABLE music_library_tracks ("
+        "library_path TEXT PRIMARY KEY, title VARCHAR(300) NOT NULL, "
+        "artist VARCHAR(300) NOT NULL, album VARCHAR(300) NOT NULL, "
+        "updated_at FLOAT NOT NULL)"
+    )
+    connection.execute(
+        "INSERT INTO music_library_tracks "
+        "(library_path, title, artist, album, updated_at) "
+        "VALUES ('old.flac', '旧歌名', '旧歌手', '旧专辑', 1)"
+    )
+    connection.commit()
+    connection.close()
+    config = ConfigModel()
+    config.main.database = f"sqlite:///{database.as_posix()}"
+    data = Data(config, start_scheduler=False)
+    try:
+        with sqlite3.connect(database) as migrated:
+            columns = {
+                row[1]
+                for row in migrated.execute(
+                    "PRAGMA table_info(music_library_tracks)"
+                ).fetchall()
+            }
+        assert {"cover_url", "lyrics", "metadata_scanned_at"} <= columns
+        assert data.music_library_metadata_scanned("old.flac") is False
+        data.save_music_library_file_metadata(
+            "old.flac",
+            {
+                "cover_url": "/music-covers/old.jpg",
+                "lyrics": [{"time": 1, "text": "旧歌词", "translation": ""}],
+            },
+        )
+        assert data.music_library_metadata_scanned("old.flac") is True
     finally:
         data.close()
 

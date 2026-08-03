@@ -18,6 +18,8 @@ dependencies = [
     "pydantic>=2.11.7",
     # Trusted server-side NetEase/Meting resolver
     "httpx>=0.28.1",
+    # Read embedded tags, cover art, and lyrics from uploaded local music
+    "mutagen>=1.47.0",
     # Timezone parsing
     "pytz>=2025.2",
     "pillow>=11.3.0",

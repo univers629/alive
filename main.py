@@ -23,6 +23,7 @@ from pathlib import Path
 from threading import Lock
 from time import time
 from traceback import format_exc
+from typing import Any
 from urllib.parse import urlparse
 
 import pytz
@@ -39,6 +40,8 @@ from fastapi.responses import (
     StreamingResponse,
 )
 from jinja2 import Environment, select_autoescape
+from mutagen import File as MutagenFile, MutagenError
+from mutagen.flac import Picture
 from PIL import Image, UnidentifiedImageError
 from toml import load as load_toml
 
@@ -1011,6 +1014,7 @@ MUSIC_LIBRARY_LIST_LIMIT = 1000
 MUSIC_STREAM_CACHE_DIR = ".alive-stream-cache"
 MUSIC_STREAM_CACHE_VERSION = "v2"
 MUSIC_STREAM_CACHE_BITRATE = "128k"
+MUSIC_EMBEDDED_COVER_MAX_BYTES = 10 * 1024 * 1024
 _music_stream_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="alive-audio")
 _music_stream_jobs: set[str] = set()
 _music_stream_jobs_lock = Lock()
@@ -1206,6 +1210,192 @@ def _music_library_file(relative: str) -> Path | None:
     return candidate
 
 
+_LRC_TIMESTAMP = re.compile(r"\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]")
+_LRC_OFFSET = re.compile(r"^\[offset:([+-]?\d+)\]$", re.IGNORECASE)
+
+
+def _tag_text(value: object) -> str:
+    if value is None:
+        return ""
+    if hasattr(value, "text"):
+        value = getattr(value, "text")
+    if isinstance(value, (list, tuple)):
+        value = value[0] if value else ""
+    if isinstance(value, bytes):
+        value = value.decode("utf-8", errors="replace")
+    return str(value).strip()
+
+
+def _first_embedded_tag(tags: object, names: tuple[str, ...]) -> str:
+    if not tags or not hasattr(tags, "items"):
+        return ""
+    wanted = {name.casefold() for name in names}
+    for key, value in tags.items():
+        if str(key).casefold() in wanted:
+            text_value = _tag_text(value)
+            if text_value:
+                return text_value
+    return ""
+
+
+def _parse_embedded_lrc(value: str) -> list[dict[str, Any]]:
+    """Convert normal or word-timestamped LRC into Alive's line format."""
+    offset_ms = 0
+    for raw_line in value.splitlines():
+        match = _LRC_OFFSET.match(raw_line.strip())
+        if match:
+            offset_ms = int(match.group(1))
+            break
+
+    parsed: list[dict[str, Any]] = []
+    by_timestamp: dict[int, dict[str, Any]] = {}
+    for raw_line in value.splitlines():
+        matches = list(_LRC_TIMESTAMP.finditer(raw_line))
+        if not matches:
+            continue
+        text_value = _LRC_TIMESTAMP.sub("", raw_line).strip()
+        if not text_value:
+            continue
+        first = matches[0]
+        fraction = first.group(3) or "0"
+        milliseconds = int(fraction.ljust(3, "0")[:3])
+        timestamp_ms = max(
+            0,
+            (int(first.group(1)) * 60 + int(first.group(2))) * 1000
+            + milliseconds
+            + offset_ms,
+        )
+        existing = by_timestamp.get(timestamp_ms)
+        if existing is not None:
+            if not existing["translation"] and text_value != existing["text"]:
+                existing["translation"] = text_value[:500]
+            continue
+        line = {
+            "time": timestamp_ms / 1000,
+            "text": text_value[:500],
+            "translation": "",
+        }
+        by_timestamp[timestamp_ms] = line
+        parsed.append(line)
+        if len(parsed) >= 5000:
+            break
+    return sorted(parsed, key=lambda line: line["time"])
+
+
+def _embedded_lyrics(tags: object) -> list[dict[str, Any]]:
+    if not tags or not hasattr(tags, "items"):
+        return []
+    candidates: list[str] = []
+    for key, value in tags.items():
+        normalized = str(key).casefold()
+        if not (
+            "lyric" in normalized
+            or normalized.startswith("uslt")
+            or normalized == "\xa9lyr"
+        ):
+            continue
+        if hasattr(value, "text"):
+            value = getattr(value, "text")
+        values = value if isinstance(value, (list, tuple)) else [value]
+        candidates.extend(_tag_text(item) for item in values)
+    for candidate in candidates:
+        parsed = _parse_embedded_lrc(candidate)
+        if parsed:
+            return parsed
+    return []
+
+
+def _embedded_cover(audio: object) -> bytes:
+    pictures = list(getattr(audio, "pictures", []) or [])
+    if pictures:
+        pictures.sort(key=lambda picture: getattr(picture, "type", 0) != 3)
+        return bytes(getattr(pictures[0], "data", b""))
+
+    tags = getattr(audio, "tags", None)
+    if not tags:
+        return b""
+    if hasattr(tags, "getall"):
+        pictures = list(tags.getall("APIC"))
+        if pictures:
+            pictures.sort(key=lambda picture: getattr(picture, "type", 0) != 3)
+            return bytes(getattr(pictures[0], "data", b""))
+    for key in ("covr", "coverart"):
+        value = tags.get(key) if hasattr(tags, "get") else None
+        if value:
+            value = value[0] if isinstance(value, (list, tuple)) else value
+            try:
+                return base64.b64decode(value) if key == "coverart" else bytes(value)
+            except (TypeError, ValueError):
+                pass
+    blocks = tags.get("metadata_block_picture") if hasattr(tags, "get") else None
+    if blocks:
+        block = blocks[0] if isinstance(blocks, (list, tuple)) else blocks
+        try:
+            return Picture(base64.b64decode(block)).data
+        except (TypeError, ValueError):
+            pass
+    return b""
+
+
+def _store_embedded_music_cover(content: bytes) -> str:
+    if not content or len(content) > MUSIC_EMBEDDED_COVER_MAX_BYTES:
+        return ""
+    try:
+        with Image.open(BytesIO(content)) as image:
+            image.verify()
+            suffix = {
+                "JPEG": ".jpg",
+                "PNG": ".png",
+                "WEBP": ".webp",
+            }.get((image.format or "").upper(), "")
+    except (OSError, UnidentifiedImageError, Image.DecompressionBombError):
+        return ""
+    if not suffix:
+        return ""
+    digest = hashlib.sha256(content).hexdigest()
+    directory = Path(u.get_path("data/public/music-covers", is_dir=True))
+    destination = directory / f"{digest}{suffix}"
+    if not destination.exists():
+        temporary = destination.with_name(f".{destination.name}.{secrets.token_hex(8)}.part")
+        try:
+            temporary.write_bytes(content)
+            temporary.replace(destination)
+        finally:
+            temporary.unlink(missing_ok=True)
+    return f"/music-covers/{destination.name}"
+
+
+def _read_music_file_metadata(file: Path) -> dict[str, Any]:
+    try:
+        audio = MutagenFile(file, easy=False)
+        if audio is None:
+            return {}
+        tags = getattr(audio, "tags", None)
+        return {
+            "title": _first_embedded_tag(tags, ("title", "tit2", "\xa9nam")),
+            "artist": _first_embedded_tag(tags, ("artist", "tpe1", "\xa9art", "albumartist")),
+            "album": _first_embedded_tag(tags, ("album", "talb", "\xa9alb")),
+            "cover_url": _store_embedded_music_cover(_embedded_cover(audio)),
+            "lyrics": _embedded_lyrics(tags),
+        }
+    except (OSError, ValueError, MutagenError) as error:
+        l.warning("Unable to read embedded music tags for %s: %s", file.name, error)
+        return {}
+
+
+def _ensure_music_file_metadata(relative: str, file: Path) -> None:
+    if d.music_library_metadata_scanned(relative):
+        return
+    metadata = _read_music_file_metadata(file)
+    d.save_music_library_file_metadata(relative, metadata)
+    l.info(
+        "Indexed embedded music tags for %s (cover=%s, lyrics=%s)",
+        file.name,
+        bool(metadata.get("cover_url")),
+        len(metadata.get("lyrics") or []),
+    )
+
+
 def _music_library_snapshot(search: str = "") -> dict:
     root = _music_library_root()
     active_path = d.active_music_library_path
@@ -1309,6 +1499,8 @@ def music_track_lookup(payload: MusicTrackLookupModel):
         raise u.APIUnsuccessful(400, "invalid music filename")
     file = _music_library_file(relative)
     exists = file is not None and file.is_file()
+    if exists and file is not None:
+        _ensure_music_file_metadata(relative, file)
     return {
         "success": True,
         "exists": exists,
@@ -1343,6 +1535,7 @@ async def music_track_upload(request: Request):
 
     relative, destination = _music_track_location(suffix, relative_path)
     if destination.is_file():
+        _ensure_music_file_metadata(relative, destination)
         _schedule_music_stream_transcode(destination)
         return {
             "success": True,
@@ -1376,6 +1569,7 @@ async def music_track_upload(request: Request):
     finally:
         temporary.unlink(missing_ok=True)
 
+    _ensure_music_file_metadata(relative, destination)
     _schedule_music_stream_transcode(destination)
     return {
         "success": True,
@@ -1441,6 +1635,10 @@ def music_set(payload: MusicStateUpdateModel):
                 ),
             }
         )
+    elif payload.library_path and payload.source_mode in {"metadata-only", "local-upload"}:
+        file = _music_library_file(payload.library_path)
+        if file is not None and file.is_file():
+            _ensure_music_file_metadata(payload.library_path, file)
     return {
         "success": True,
         "music": d.music_set(music),
