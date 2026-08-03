@@ -100,7 +100,6 @@
             <div class="panel-card">
                 <div class="panel-section">
                     <h2 class="panel-section-title">卡片风格</h2>
-                    <p class="panel-help">选择主页与详情页的卡片材质；默认保留毛玻璃风格。</p>
                     <label class="card-style-control" for="card-style-toggle">
                         <span class="card-style-control__copy">
                             <strong id="card-style-label">毛玻璃</strong>
@@ -110,7 +109,6 @@
                             <span class="card-style-switch__track" aria-hidden="true"></span>
                         </span>
                     </label>
-                    <p class="panel-help">关闭开关为毛玻璃；开启开关为不透明卡片。</p>
                 </div>
             </div>
 
@@ -196,6 +194,20 @@
                 </div>
             </div>
 
+            <div class="panel-card panel-card-compact">
+                <div class="panel-section">
+                    <label class="card-style-control" for="activity-event-details-toggle">
+                        <span class="card-style-control__copy">
+                            <strong>显示应用详细事件</strong>
+                        </span>
+                        <span class="card-style-switch">
+                            <input id="activity-event-details-toggle" type="checkbox" role="switch" aria-label="显示最近应用活动的详细事件">
+                            <span class="card-style-switch__track" aria-hidden="true"></span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
             <div class="panel-card">
                 <div class="panel-section">
                     <div class="panel-section-heading">
@@ -205,7 +217,7 @@
                         </div>
                         <button class="btn btn-secondary" id="refresh-music-library-btn" type="button">刷新音乐库</button>
                     </div>
-                    <p class="panel-help">文件在服务端按内容校验保存。当前正在一起听的文件会锁定，切歌或清空音乐状态后才能删除。</p>
+                    <p class="panel-help">文件按原文件名保存。当前正在一起听的文件会锁定，切歌或清空音乐状态后才能删除。</p>
                     <div class="music-library-tools">
                         <input id="music-library-search" class="panel-input" type="search" maxlength="160"
                             autocomplete="off" placeholder="搜索歌曲、艺术家或专辑">

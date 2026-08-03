@@ -119,6 +119,7 @@
   }
   function renderActivities(activity) {
     const records = Array.isArray(activity?.recent) ? activity.recent : [];
+    const eventDetailsEnabled = activity?.event_details_enabled !== false;
     activityList.replaceChildren(); setText('details-activity-record-count', `${records.length} 条`);
     if (!records.length) {
       const empty = document.createElement('p'); empty.className = 'details-empty';
@@ -127,7 +128,9 @@
     }
     records.forEach((record) => {
       const row = document.createElement('article'); row.className = 'details-activity-row';
-      const summary = document.createElement('button'); summary.type = 'button'; summary.className = 'details-activity-summary'; summary.setAttribute('aria-expanded', 'false');
+      const summary = document.createElement(eventDetailsEnabled ? 'button' : 'div');
+      if (eventDetailsEnabled) { summary.type = 'button'; summary.setAttribute('aria-expanded', 'false'); }
+      summary.className = 'details-activity-summary';
       const copy = document.createElement('div'); copy.className = 'details-activity-copy';
       const name = document.createElement('strong'); name.textContent = record.app_name || '未知应用';
       const latestEvent = record.latest_event;
@@ -139,6 +142,7 @@
       const when = document.createElement('time'); when.dateTime = new Date(Number(record.last_seen_at) * 1000).toISOString();
       when.textContent = record.active ? '使用中' : formatActivityTime(record.last_seen_at); meta.append(duration, when);
       summary.append(activityIcon(record), copy, meta);
+      if (!eventDetailsEnabled) { row.append(summary); activityList.append(row); return; }
       const events = document.createElement('div'); events.className = 'details-activity-events'; events.hidden = true;
       const renderEventRows = (eventRows) => {
         events.replaceChildren();

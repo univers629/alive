@@ -255,13 +255,18 @@ body.admin-panel[data-loading="true"] .panel-card {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  min-height: 58px;
-  padding: 12px 14px;
+  min-height: 44px;
+  padding: 8px 12px;
   color: var(--alive-ink);
   border: 1px solid var(--alive-border-soft);
   border-radius: 16px;
   background: var(--alive-surface);
   cursor: pointer;
+}
+
+.panel-card-compact .panel-section {
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 .card-style-control__copy strong,

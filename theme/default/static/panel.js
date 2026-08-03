@@ -12,6 +12,7 @@ let displaySettings = {
     visit_display_mode: 'total',
     danmaku_enabled: true,
     health_section_enabled: true,
+    activity_event_details_enabled: true,
     comment_display_limit: 8,
     danmaku_replay_count: 1,
     danmaku_replay_interval: 30,
@@ -198,6 +199,8 @@ async function initPage() {
         document.getElementById('private-mode-toggle').checked = privateMode;
         const healthSectionToggle = document.getElementById('health-section-toggle');
         if (healthSectionToggle) healthSectionToggle.checked = displaySettings.health_section_enabled !== false;
+        const activityEventDetailsToggle = document.getElementById('activity-event-details-toggle');
+        if (activityEventDetailsToggle) activityEventDetailsToggle.checked = displaySettings.activity_event_details_enabled !== false;
         const visitDisplayMode = document.getElementById('visit-display-mode');
         if (visitDisplayMode) {
             visitDisplayMode.value = displaySettings.visit_display_mode || 'total';
@@ -856,6 +859,20 @@ async function toggleHealthSection(enabled) {
     }
 }
 
+async function toggleActivityEventDetails(enabled) {
+    const toggle = document.getElementById('activity-event-details-toggle');
+    try {
+        const response = await postJSON('/api/admin/settings', { activity_event_details_enabled: enabled });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || data.details || '保存失败');
+        displaySettings = data.settings;
+    } catch (error) {
+        console.error('切换应用详细事件失败:', error);
+        if (toggle) toggle.checked = displaySettings.activity_event_details_enabled !== false;
+        alert(`切换应用详细事件失败：${error.message || error}`);
+    }
+}
+
 // 获取统计数据
 async function fetchMetrics() {
     try {
@@ -944,6 +961,12 @@ document.addEventListener('DOMContentLoaded', function () {
     if (healthSectionToggle) {
         healthSectionToggle.addEventListener('change', function () {
             toggleHealthSection(this.checked);
+        });
+    }
+    const activityEventDetailsToggle = document.getElementById('activity-event-details-toggle');
+    if (activityEventDetailsToggle) {
+        activityEventDetailsToggle.addEventListener('change', function () {
+            toggleActivityEventDetails(this.checked);
         });
     }
 

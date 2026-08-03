@@ -755,6 +755,7 @@ def details_response(activity_period: str = "daily", activity_date: str | None =
     health = d.health_state
     music = d.music_state
     activity = d.activity_snapshot(timeout, activity_period, activity_date)
+    activity["event_details_enabled"] = d.activity_event_details_enabled
     _, status = d.status
 
     online_count = state_counts["active"] + state_counts["idle"]
@@ -835,6 +836,8 @@ def details_query(period: str = "daily", date: str | None = None):
     summary="获取应用在指定日期的详细活动事件",
 )
 def details_events(category: str = "desktop", app_key: str = "", date: str | None = None):
+    if not d.activity_event_details_enabled:
+        return {"success": True, "hidden": True, "date_label": "", "events": []}
     return {"success": True, **d.activity_events(category, app_key, date)}
 
 
@@ -1636,6 +1639,7 @@ def admin_snapshot():
             "visit_display_mode": d.visit_display_mode,
             "danmaku_enabled": d.danmaku_enabled,
             "health_section_enabled": d.health_section_enabled,
+            "activity_event_details_enabled": d.activity_event_details_enabled,
             "comment_display_limit": d.comment_display_limit,
             "danmaku_replay_count": d.danmaku_replay_count,
             "danmaku_replay_interval": d.danmaku_replay_interval,
@@ -1731,6 +1735,12 @@ async def admin_settings(request: Request):
         if enabled is None:
             raise u.APIUnsuccessful(400, "health_section_enabled must be boolean")
         d.set_runtime_setting("health_section_enabled", "true" if enabled else "false")
+    if "activity_event_details_enabled" in body:
+        raw = body["activity_event_details_enabled"]
+        enabled = raw if isinstance(raw, bool) else u.tobool(raw)
+        if enabled is None:
+            raise u.APIUnsuccessful(400, "activity_event_details_enabled must be boolean")
+        d.set_runtime_setting("activity_event_details_enabled", "true" if enabled else "false")
     for key, minimum, maximum in (
         ("comment_display_limit", 1, 50),
         ("danmaku_replay_count", 1, 10),
@@ -1791,6 +1801,7 @@ async def admin_settings(request: Request):
             "visit_display_mode": d.visit_display_mode,
             "danmaku_enabled": d.danmaku_enabled,
             "health_section_enabled": d.health_section_enabled,
+            "activity_event_details_enabled": d.activity_event_details_enabled,
             "comment_display_limit": d.comment_display_limit,
             "danmaku_replay_count": d.danmaku_replay_count,
             "danmaku_replay_interval": d.danmaku_replay_interval,
