@@ -67,7 +67,7 @@ metrics:
   网易云音频由访客浏览器直接加载，不经过 Alive 存储。
 - `main.health_session_timeout`：身体状态多久未更新后显示为非实时，默认 1800 秒。
 - `main.cors_origins`：生产环境建议写明确来源，不要使用 `*`。
-- `status.device_timeout`：设备心跳消失后自动标记为未使用的秒数，默认 150；
+- `status.device_timeout`：设备心跳消失后自动标记为未使用的秒数，默认 90；
   设置为 0 可关闭。应大于客户端的心跳间隔。
 - `main.https`、`main.ssl_cert`、`main.ssl_key`：直接由 Uvicorn 提供 HTTPS。
   使用反向代理时通常保持 `main.https: false`，由代理终止 TLS。

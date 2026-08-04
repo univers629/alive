@@ -346,10 +346,10 @@ class _StatusConfigModel(BaseModel):
     *仅在回退到原始轮询方式后使用*
     '''
 
-    device_timeout: int = 150
+    device_timeout: int = 90
     '''
     设备超过多少秒没有上报后，自动标记为未使用。
-    - 默认 150 秒，应大于客户端心跳间隔
+    - 默认 90 秒，应大于客户端心跳间隔
     - 设置为 0 可关闭服务端超时兜底
     '''
 
