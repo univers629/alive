@@ -186,12 +186,14 @@
   document.addEventListener('DOMContentLoaded', () => {
     scan();
     const observer = new MutationObserver((records) => {
+      let shouldScan = false;
       records.forEach((record) => {
         record.addedNodes.forEach((node) => {
-          if (node instanceof Element) scan(node);
+          if (node instanceof Element) shouldScan = true;
         });
         record.removedNodes.forEach(cleanup);
       });
+      if (shouldScan) scan();
     });
     observer.observe(document.body, { childList: true, subtree: true });
   });

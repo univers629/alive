@@ -464,6 +464,7 @@ def details_page(request: Request):
         page_favicon=favicon_url(),
         page_background=c.page.background,
         card_style=d.card_style,
+        initial_details=details_response(),
         site_chrome=site_chrome or "",
         site_footer=site_footer or "",
         music_island=music_island or "",

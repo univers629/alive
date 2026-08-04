@@ -6,6 +6,7 @@
   const donut = document.getElementById('details-app-donut');
   const donutLegend = document.getElementById('details-donut-legend');
   const usageBars = document.getElementById('details-usage-bars');
+  const initialData = document.getElementById('details-initial-data');
   const periodLabel = document.getElementById('details-activity-period-label');
   const datePickerTrigger = document.getElementById('details-date-picker-trigger');
   const datePickerMenu = document.getElementById('details-date-picker-menu');
@@ -23,6 +24,7 @@
   let selectedPeriod = 'daily';
   let selectedDate = new Date();
   let datePickerLevel = 'year';
+  let lastRefreshAt = 0;
 
   function setText(id, value) { const element = document.getElementById(id); if (element) element.textContent = String(value); }
   function optimizedAppIconUrl(value, size = 48) {
@@ -254,7 +256,7 @@
   async function refresh() {
     try {
       const params = new URLSearchParams({ period: selectedPeriod, date: apiDate(selectedDate) });
-      const response = await fetch(`/api/details/query?${params}`, { headers: { Accept: 'application/json' }, cache: 'no-store' }); if (!response.ok) throw new Error('详情读取失败'); render(await response.json());
+      const response = await fetch(`/api/details/query?${params}`, { headers: { Accept: 'application/json' }, cache: 'no-store' }); if (!response.ok) throw new Error('详情读取失败'); render(await response.json()); lastRefreshAt = Date.now();
     } catch (error) { setText('details-summary', '暂时无法读取详情数据，请稍后刷新。'); deviceList.replaceChildren(); activityList.replaceChildren(); }
   }
   function changePeriod(offset) {
@@ -272,5 +274,17 @@
   document.getElementById('details-date-picker-back')?.addEventListener('click', (event) => { event.stopPropagation(); if (datePickerLevel === 'day') datePickerLevel = 'month'; else if (datePickerLevel === 'month') datePickerLevel = 'year'; else { closeDatePicker(); return; } renderDatePicker(); });
   document.getElementById('details-date-picker-close')?.addEventListener('click', (event) => { event.stopPropagation(); closeDatePicker(); });
   document.addEventListener('click', (event) => { if (datePickerMenu && !datePickerMenu.hidden && !event.target.closest('.details-date-picker')) closeDatePicker(); });
-  refresh(); window.setInterval(() => { if (!document.hidden) refresh(); }, 10000);
+  try {
+    const initialPayload = JSON.parse(initialData?.textContent || 'null');
+    if (initialPayload?.success) {
+      render(initialPayload);
+      lastRefreshAt = Date.now();
+    } else refresh();
+  } catch (error) {
+    refresh();
+  }
+  window.setInterval(() => { if (!document.hidden) refresh(); }, 30000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && Date.now() - lastRefreshAt >= 30000) refresh();
+  });
 })();

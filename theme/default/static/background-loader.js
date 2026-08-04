@@ -18,10 +18,6 @@
     image.src = background;
   };
 
-  const schedule = () => {
-    if ('requestIdleCallback' in window) window.requestIdleCallback(applyBackground, { timeout: 1200 });
-    else window.setTimeout(applyBackground, 350);
-  };
-  if (document.readyState === 'complete') schedule();
-  else window.addEventListener('load', schedule, { once: true });
+  if ('requestIdleCallback' in window) window.requestIdleCallback(applyBackground, { timeout: 1200 });
+  else window.setTimeout(applyBackground, 350);
 })();

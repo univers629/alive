@@ -686,8 +686,9 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert 'href="https://github.com/Alive-Project"' in footer
         assert "img/alive-project-icon-16.webp" in footer
         assert 'loading="lazy" decoding="async"' in footer
-        assert "https://cdn.simpleicons.org/python/3776AB" in footer
-        assert "https://cdn.simpleicons.org/fastapi/009688" in footer
+        assert "img/stack/python.svg" in footer
+        assert "img/stack/fastapi.svg" in footer
+        assert "cdn.simpleicons.org" not in footer
         project_icon = Path(main.u.get_path("theme/default/static/img/alive-project-icon-16.webp"))
         with Image.open(project_icon) as image:
             assert image.format == "WEBP"
@@ -774,7 +775,9 @@ def test_details_page_uses_real_metrics_and_sortable_device_snapshot():
         assert 'id="details-device-sort"' in page.text
         assert "应用使用记录" in page.text
         assert 'id="details-activity-list"' in page.text
+        assert 'id="details-initial-data"' in page.text
         assert "details.js" in page.text
+        assert "window.setInterval(() => { if (!document.hidden) refresh(); }, 30000)" in client.get("/static/details.js").text
 
         mobile_created = client.post(
             "/api/device/set",

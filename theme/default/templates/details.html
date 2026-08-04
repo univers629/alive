@@ -193,6 +193,7 @@
     {{ site_footer | safe }}
     {{ music_island | safe }}
 
+    <script id="details-initial-data" type="application/json">{{ initial_details | tojson }}</script>
     <script src="{{ url_for('static', filename='color-mode.js') }}" defer></script>
     <script src="{{ url_for('static', filename='glass-select.js') }}" defer></script>
     <script src="{{ url_for('static', filename='site-chrome.js') }}" defer></script>
