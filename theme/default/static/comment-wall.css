@@ -125,7 +125,8 @@ body.music-island-visible.music-island-expanded .comment-wall__stage {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  max-width: min(520px, 82vw);
+  width: max-content;
+  max-width: none;
   padding: 8px 13px;
   white-space: nowrap;
   color: #fff;

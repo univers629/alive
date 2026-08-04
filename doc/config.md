@@ -59,7 +59,7 @@ metrics:
 - `main.music_library`：客户端按需上传的音频存储目录。Docker 默认使用
   `/alive/music-library`，宿主机目录由 `ALIVE_MUSIC_LIBRARY_HOST` 决定。
 - `main.music_upload_max_mb`：单首音频上传上限，默认 200 MiB；上传过程流式落盘。
-- `main.music_session_timeout`：音乐上报心跳失效秒数，默认 35。
+- `main.music_session_timeout`：音乐上报心跳失效秒数，默认 60。
 - `main.netease_meting_api`：网易云歌曲 ID 的主 Meting 兼容解析地址，必须为
   HTTPS。服务端只发送歌曲 ID，不发送 Alive 密钥。
 - `main.netease_meting_fallback_api`：主接口失败时的备用解析地址；留空可禁用。

@@ -181,7 +181,7 @@ class _MainConfigModel(BaseModel):
     单个音频文件允许上传的最大 MiB。上传采用流式落盘，不会把整首歌读入内存。
     '''
 
-    music_session_timeout: int = 90
+    music_session_timeout: int = 60
     '''
     `main.music_session_timeout`
     音乐上报器停止心跳后，当前音乐卡片及音频失效的秒数。
