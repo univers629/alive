@@ -563,17 +563,24 @@
 }
 
 .device-card__icon--heart {
-  color: #fff;
-  background: linear-gradient(145deg, #ff7285, #e3365b);
-  box-shadow: 0 7px 18px rgba(220, 52, 86, .26);
-  font-size: 1rem;
+  color: #d84b86;
+  border-color: rgba(216, 75, 134, .18);
+  background: rgba(216, 75, 134, .14);
+  box-shadow: 0 7px 18px rgba(216, 75, 134, .14);
 }
 
 .device-card__icon--steps {
-  color: #fff;
-  background: linear-gradient(145deg, #63d8a6, #22a676);
-  box-shadow: 0 7px 18px rgba(34, 166, 118, .24);
-  font: 760 .82rem/1 "Segoe UI Variable", "Microsoft YaHei", sans-serif;
+  color: #2fae72;
+  border-color: rgba(47, 174, 114, .18);
+  background: rgba(47, 174, 114, .14);
+  box-shadow: 0 7px 18px rgba(47, 174, 114, .14);
+}
+
+.health-card__metric-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
+  fill: currentColor;
 }
 
 .heart-card__reading {

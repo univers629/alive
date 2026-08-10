@@ -606,6 +606,9 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert "GB 内存" in device_script
         assert "心率" in home.text
         assert "今日步数" in home.text
+        assert home.text.count('class="health-card__metric-icon"') == 2
+        assert "M12 21.35 10.55 20.03" in home.text
+        assert "M13.5 5.5a2 2 0 1 0 0-4" in home.text
         assert "随身手机" not in home.text
         assert "床头平板" not in home.text
         assert "等待真机上报" in home.text
@@ -702,6 +705,9 @@ def test_home_includes_new_music_island_without_legacy_playlist_api():
         assert ".health-overview__grid {" in device_css
         assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in device_css
         assert ".steps-card__ring {" in device_css
+        assert ".health-card__metric-icon {" in device_css
+        assert "color: #d84b86;" in device_css
+        assert "color: #2fae72;" in device_css
         assert ".tablet-device-icon {" in device_css
         assert ".device-card--idle .device-card__name strong," in device_css
         assert "var(--alive-ink, #282532) 56%" in device_css
